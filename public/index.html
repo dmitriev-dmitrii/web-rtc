@@ -24,7 +24,7 @@
         import {useWebRTC} from "./useWebRTC.js";
 
         const {connectToWebSocket , sendWebSocketMessage , setupWebSocketMessageHandlers} = useWebSocket()
-        const {  createPeerOffer , onPeerOffer ,  onPeerAnswer} = useWebRTC()
+        const {  createPeerOffer , onPeerOffer ,  onPeerAnswer , sendWebRtcMessage } = useWebRTC()
 
         await connectToWebSocket()
 
@@ -32,6 +32,10 @@
         if ( isHost ) {
             const answerCallback = async ( payload )=> {
               await  onPeerAnswer( payload )
+
+
+
+
             }
 
             setupWebSocketMessageHandlers({
@@ -73,15 +77,17 @@
     </script>
 
     <script type="module" defer>
-
+        import {useWebRTC} from "./useWebRTC.js";
+        const {   sendWebRtcMessage } = useWebRTC()
         const chatForm = document.getElementById('chat-form')
+        console.log(chatForm    )
         const onChatFormSubmit = (e)=>{
 
            e.preventDefault()
-           const input  =      e.target.querySelector('input')
 
-            input.value
+           const input  =   e.target.querySelector('input')
 
+            sendWebRtcMessage( input.value   )
 
             input.value = ''
         }

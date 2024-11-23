@@ -3,6 +3,19 @@ const peerConnection = await new RTCPeerConnection({
     iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
 });
 
+const chanelOptions = {}
+
+const chanel  = await peerConnection.createDataChannel("rtc-chanel", chanelOptions );
+
+chanel.onopen = () => {
+    console.log("Канал открыт");
+};
+chanel.onclose = () => {
+    console.log("Канал закрыт");
+};
+
+
+
 
 
 // { url: 'stun:stun01.sipphone.com' },
@@ -80,7 +93,7 @@ function handleAnswer(sdp) {
 // Функция для обработки полученных сообщений
 // function onReceiveMessage(event) {
 //     console.log("Получено сообщение: " + event.data);
-//     displayMessage(event.data); // Отображение сообщения чата
+//
 // }
 
 // Отправка сообщения чата
@@ -101,6 +114,15 @@ function handleAnswer(sdp) {
 
 export const  useWebRTC  = ()=> {
 
+    const sendWebRtcMessage = (payload) => {
+
+
+        console.log('chanel state', chanel.readyState)
+        chanel.send(JSON.stringify(payload));
+
+    }
+
+
     const  onPeerConnected  = () =>{
 
     }
@@ -109,6 +131,34 @@ export const  useWebRTC  = ()=> {
     // const onCallIceCandidate = ()>{
     //
     //  }
+
+
+    const createChannel = async ()=> {
+        peerConnection.createDataChannel("rtc-chanel", chanelOptions );
+
+        // sendChannel.onopen = () => {
+        //     console.log("Канал открыт");
+        //     updateStatus("Канал открыт");
+        // };
+
+        console.log('createWebChannel');
+    }
+
+   peerConnection.ondatachannel = async (event) => {
+
+
+       console.log('ondatachannel' , event )
+
+       event.channel.onmessage = (event)=>{
+           console.log(' peerConnection.onmessage IN' ,event.data )
+       };
+
+   }
+
+    peerConnection.onmessage = (event)=>{
+        console.log(' peerConnection.onmessage ' ,event.data )
+    };
+
 
 
    const  onPeerAnswer = async ({data})=> {
@@ -174,6 +224,7 @@ export const  useWebRTC  = ()=> {
     // }
 
     return {
+        sendWebRtcMessage,
         createPeerOffer,
         onPeerOffer,
         onPeerAnswer,
