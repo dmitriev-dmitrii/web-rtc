@@ -5,7 +5,7 @@ const webSocketMessageHandlersMap = new Map();
 const reconnectDelay = 1000; // Начальная задержка в миллисекундах для реконекта
 let reconnectAttempts = 0; // Отслеживание количества попыток реконекта
 
-const WEB_SOCKET_URL = 'ws://localhost:4000';
+const WEB_SOCKET_URL = 'ws://'+window.location.host;
 let ws
 
 

@@ -27,7 +27,7 @@ wss.on('connection', (ws) => {
 });
 
 // Запуск сервера
-const PORT = process.env.PORT || 4000;
+const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
     console.log(`Сервер запущен на http://localhost:${PORT}`);
 });
