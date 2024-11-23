@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebRTC Чат</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/webrtc-adapter/9.0.1/adapter.min.js" integrity="sha512-NVplxpmGbQ9r63C108KdM/bKT1mV1K+oUFkhCKwTBuD9LhcABwPoGFoiujBs0lPJQSp6SLNkUBYg9zTliIwdVQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+</head>
+<body>
+    <h1>WebRTC <div id="status"></div></h1>
+
+    <button >createPeerOffer</button>
+
+    <form id="chat-form">
+        <input type="text"  placeholder="Введите сообщение...">
+        <button >Отправить</button>
+    </form>
+
+    <script type="module">
+        const userId = adapter.browserDetails.browser
+        const isHost =  userId === 'chrome'
+
+        import {useWebSocket} from "./useWebSocket.js";
+        import {useWebRTC} from "./useWebRTC.js";
+
+        const {connectToWebSocket , sendWebSocketMessage , setupWebSocketMessageHandlers} = useWebSocket()
+        const {  createPeerOffer , onPeerOffer ,  onPeerAnswer} = useWebRTC()
+
+        await connectToWebSocket()
+
+
+        if ( isHost ) {
+            const answerCallback = async ( payload )=> {
+              await  onPeerAnswer( payload )
+            }
+
+            setupWebSocketMessageHandlers({
+                ['peer-answer']:[ answerCallback ],
+            })
+
+            const {localDescription}  =  await createPeerOffer()
+
+            sendWebSocketMessage({
+                from: userId,
+                type: 'peer-offer',
+                data: localDescription
+            });
+
+
+        }
+
+        if ( !isHost ) {
+
+            const cb = async ( payload)=>{
+
+               const {localDescription}  =   await  onPeerOffer( payload )
+
+                sendWebSocketMessage({
+                    from: userId,
+                    type: 'peer-answer',
+                    data: localDescription
+                });
+            }
+
+
+            setupWebSocketMessageHandlers({
+                ['peer-offer']:[ cb ],
+            })
+
+        }
+
+
+    </script>
+
+    <script type="module" defer>
+
+        const chatForm = document.getElementById('chat-form')
+        const onChatFormSubmit = (e)=>{
+
+           e.preventDefault()
+           const input  =      e.target.querySelector('input')
+
+            input.value
+
+
+            input.value = ''
+        }
+        chatForm.addEventListener('submit',onChatFormSubmit)
+
+    </script>
+</body>
+</html>
