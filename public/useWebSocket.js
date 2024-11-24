@@ -1,37 +1,132 @@
-// server.js
-const express = require('express');
-const WebSocket = require('ws');
-const http = require('http');
 
-const app = express();
-const server = http.createServer(app);
-const wss = new WebSocket.Server({ server });
+const webSocketQueue  = [];
+const webSocketMessageHandlersMap = new Map();
 
-app.use(express.static('public')); // Папка для статических файлов (например, index.html)
+const reconnectDelay = 1000; // Начальная задержка в миллисекундах для реконекта
+let reconnectAttempts = 0; // Отслеживание количества попыток реконекта
 
-const wsClients = []
+const WEB_SOCKET_URL = 'ws://'+ window.location.host;
+let ws
 
-wss.on('connection', (ws) => {
-    console.log('Новое соединение');
+const userId = adapter.browserDetails.browser
 
-    ws.on('message', (message) => {
-        console.log(message.type , message.from)
-        // Распространяем сообщение всем подключенным клиентам
-        wss.clients.forEach((client) => {
+export const useWebSocket = () => {
+    const onWebSocketMessage = async (event) => {
+        const { data } = event;
+        //@ts-ignore
+        const payload = JSON.parse(data);
+        const { type } = payload;
+        // console.log(payload)
+        if (!type && !webSocketMessageHandlersMap.has(type)) {
+            console.warn(`WebSocket , onSocketMessage - empty callback for event type:"${type}"`);
+            return;
+        }
 
-            if (client.readyState === WebSocket.OPEN && client !== ws) {
-                client.send(JSON.stringify(JSON.parse(message)));
+        const callbacksSet = webSocketMessageHandlersMap.get(type);
+
+        if (!callbacksSet) {
+            console.warn(`WebSocket No handlers found for event type "${type}"`);
+            return;
+        }
+
+        try {
+            const callbacksPromises = Array.from(callbacksSet).map((callback) => {
+                return callback(payload);
+            });
+
+            await Promise.all(callbacksPromises);
+        } catch (e) {
+            console.log(`WebSocket error of ws handle, message type :"${type}", err:` ,e )
+        }
+    };
+
+    const setupWebSocketMessageHandlers = (eventsMap) => {
+        if (!Object.keys(eventsMap).length) {
+            return;
+        }
+
+        for (const [type, callbacksArr] of Object.entries(eventsMap)) {
+            webSocketMessageHandlersMap.set(type , new Set(callbacksArr));
+        }
+    };
+
+    function sendWebSocketMessage(payload) {
+
+        if (ws?.readyState !== WebSocket.OPEN) {
+            console.warn('WebSocket is not OPEN , message added to webSocketQueue');
+            webSocketQueue.push(payload);
+            return;
+        }
+
+        payload.from = userId
+        ws.send(JSON.stringify(payload));
+    }
+
+    const  onWebSocketOpen = async () => {
+
+        console.log('WebSocket connected');
+        reconnectAttempts = 0;
+
+        while (webSocketQueue.length > 0) {
+
+            if (ws.readyState !== WebSocket.OPEN) {
+                return;
             }
-        });
-    });
 
-    ws.on('close', () => {
-        console.log('Соединение закрыто');
-    });
-});
+            const message = webSocketQueue.shift();
+            sendWebSocketMessage(message)
+        }
 
-// Запуск сервера
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-    console.log(`Сервер запущен на http://localhost:${PORT}`);
-});
+    };
+
+    const onWebSocketClose = async ({ code, reason }) => {
+
+        if (code === 1005) {
+            console.log(`WebSocket closed server force close socket`);
+            return
+        }
+
+        reconnectAttempts++;
+        const delay = Math.min(reconnectDelay * reconnectAttempts, 30000); // Ограничение до 30 секунд
+        console.log(`WebSocket reconnect try ${delay}ms...`);
+
+        setTimeout(  () => {
+            connectToWebSocket();
+        }, delay);
+    };
+
+    const  onWebSocketError = async  (error) => {
+        if (!reconnectAttempts) {
+            console.error('WebSocket error:', error);
+        }
+    };
+
+    const connectToWebSocket = async () => {
+        return new Promise((resolve, reject) => {
+
+            ws = new WebSocket(`${WEB_SOCKET_URL}`);
+
+            ws.onmessage = onWebSocketMessage
+            ws.onclose = onWebSocketClose
+
+            ws.onerror = (e)=>{
+                onWebSocketError(e)
+                reject(e)
+            }
+
+            ws.onopen = () => {
+                onWebSocketOpen(ws)
+                resolve(ws)
+            }
+
+        })
+    };
+
+    return {
+        setupWebSocketMessageHandlers,
+        sendWebSocketMessage,
+        connectToWebSocket,
+    };
+};
+
+

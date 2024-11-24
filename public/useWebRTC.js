@@ -64,6 +64,7 @@ export const useWebRTC = (sendWebSocketMessage) => {
         console.log('Received peer offer:');
 
         await peerConnection.setRemoteDescription(new RTCSessionDescription(data));
+
     };
 
     const createPeerAnswer = async () => {
@@ -90,6 +91,9 @@ export const useWebRTC = (sendWebSocketMessage) => {
     };
 
     const handleIceCandidate = async ({data, from }) => {
+
+        console.log('handleIceCandidate')
+
         if (peerConnection.remoteDescription && from !== userId) {
             await peerConnection.addIceCandidate(new RTCIceCandidate(data));
             console.log('ICE candidate added.');
