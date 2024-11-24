@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Видеозвонок</title>
+    <title> Web-RTC  </title>
     <style>
         video {
             width: 45%;
@@ -11,10 +11,150 @@
     </style>
 </head>
 <body>
-    <h1>Видеозвонок</h1>
+    <h1>Web-RTC status: <span id="status"></span></h1>
     <video id="localVideo" autoplay muted></video>
     <video id="remoteVideo" autoplay></video>
-    <button id="startCall">Начать звонок</button>
-    <script type="module" src="app.js"></script>
+    <button id="startCall">createOffer</button>
+
+    <script type="module" defer>
+        const localVideo = document.getElementById('localVideo');
+        const remoteVideo = document.getElementById('remoteVideo');
+        const startCallButton = document.getElementById('startCall');
+
+        const socket = new WebSocket(`ws://${window.location.host}`);
+        let localStream;
+
+
+        const configuration = {
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' }
+            ]
+        };
+
+        let peerConnection = new RTCPeerConnection(configuration);
+
+        localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        localVideo.srcObject = localStream;
+
+        localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+
+        peerConnection.ontrack = (event) => {
+            remoteVideo.srcObject = event.streams[0];
+        };
+
+        peerConnection.onicecandidate = (event) => {
+            console.log('onicecandidate')
+
+            if (event.candidate) {
+                socket.send(JSON.stringify({ type: 'ice-candidate', candidate: event.candidate }));
+            }
+        };
+        peerConnection.onconnectionstatechange = (e)=>{
+            console.log('onconnectionstatechange', e)
+        }
+
+
+        // peerConnection.onaddstream
+        // peerConnection.onremovestream
+
+        peerConnection.ondatachannel = ()=>{
+            console.log(' ondatachannel ')
+        }
+
+        peerConnection.onicecandidateerror = ()=>{
+            console.log(' onicecandidateerror ')
+        }
+
+        peerConnection.oniceconnectionstatechange = ()=>{
+            console.log(' oniceconnectionstatechange ')
+        }
+
+        peerConnection.onicegatheringstatechange = ()=>{
+            console.log(' onicegatheringstatechange ')
+        }
+
+        peerConnection.onnegotiationneeded = ()=>{
+            console.log('onnegotiationneeded  ')
+        }
+
+        peerConnection.onsignalingstatechange = ()=>{
+
+            console.log(' onsignalingstatechange ', peerConnection.signalingState )
+        }
+
+
+        async function startCall() {
+
+            const offer = await peerConnection.createOffer();
+            await peerConnection.setLocalDescription(offer);
+            socket.send(JSON.stringify({ type: 'offer', offer }));
+        }
+
+        socket.onmessage = async (event) => {
+            try {
+                const message = JSON.parse(event.data);
+
+                if (message.type === 'offer') {
+
+                    await peerConnection.setRemoteDescription(new RTCSessionDescription(message.offer));
+                    const answer = await peerConnection.createAnswer();
+                    await peerConnection.setLocalDescription(answer);
+                    socket.send(JSON.stringify({ type: 'answer', answer }));
+                    return
+                }
+                if (message.type === 'answer') {
+                    peerConnection.setRemoteDescription(new RTCSessionDescription(message.answer));
+                    return
+                }
+
+                if (message.type === 'ice-candidate') {
+                    peerConnection.addIceCandidate(new RTCIceCandidate(message.candidate));
+                    return
+                }
+            } catch (error) {
+                console.error('Ошибка при обработке сообщения:', error);
+            }
+        };
+
+        startCallButton.addEventListener('click', startCall);
+
+
+
+
+        // const userId = adapter.browserDetails.browser;
+        // const isHost = userId === 'chrome';
+
+        import { useWebSocket } from "./useWebSocket.js";
+        import { useWebRTC } from "./useWebRTC.js";
+
+        // const { connectToWebSocket, sendWebSocketMessage, setupWebSocketMessageHandlers } = useWebSocket();
+        // const { createPeerOffer, onPeerOffer, onPeerAnswer, sendWebRTCMessage, handleIceCandidate, createPeerAnswer } = useWebRTC(sendWebSocketMessage);
+        //
+        // await connectToWebSocket();
+        //
+        // setupWebSocketMessageHandlers({
+        //     'ice-candidate':[ handleIceCandidate], // Обработка ICE кандидатов
+        //     'answer': [onPeerAnswer],
+        //     'offer': [onPeerOffer,createPeerAnswer],
+        // });
+        //
+        //
+        // document.getElementById('create-offer').onclick = createPeerOffer// Хост создает предложение
+        //
+        //
+        // const chatForm = document.getElementById('chat-form');
+        //
+        // const onChatFormSubmit = async (e) => {
+        //     e.preventDefault();
+        //     const input = e.target.querySelector('input');
+        //     const message = input.value;
+        //
+        //     sendWebRTCMessage(message); // Отправляем сообщение через WebRTC
+        //
+        //     input.value = ''; // Очищаем поле ввода
+        // };
+        //
+        // chatForm.addEventListener('submit', onChatFormSubmit);
+    </script>
 </body>
 </html>

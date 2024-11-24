@@ -8,7 +8,7 @@ let reconnectAttempts = 0; // Отслеживание количества по
 const WEB_SOCKET_URL = 'ws://'+ window.location.host;
 let ws
 
-const userId = adapter.browserDetails.browser
+const userId = window.navigator.appVersion
 
 export const useWebSocket = () => {
     const onWebSocketMessage = async (event) => {

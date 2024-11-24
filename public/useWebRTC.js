@@ -1,4 +1,4 @@
-const userId = adapter.browserDetails.browser
+const userId = window.navigator.appVersion
 
 
 const peerConnection = new RTCPeerConnection({

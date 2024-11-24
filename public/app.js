@@ -64,7 +64,6 @@ peerConnection.onsignalingstatechange = ()=>{
 }
 
 
-
 async function startCall() {
 
     const offer = await peerConnection.createOffer();
