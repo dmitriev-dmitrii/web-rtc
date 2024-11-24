@@ -2,63 +2,19 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WebRTC Чат</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/webrtc-adapter/9.0.1/adapter.min.js" integrity="sha512-NVplxpmGbQ9r63C108KdM/bKT1mV1K+oUFkhCKwTBuD9LhcABwPoGFoiujBs0lPJQSp6SLNkUBYg9zTliIwdVQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <title>Видеозвонок</title>
+    <style>
+        video {
+            width: 45%;
+            margin: 5px;
+        }
+    </style>
 </head>
 <body>
-<h1>WebRTC status: <span id="status"></span></h1>
-
-<button id="create-offer">
-    create offer
-</button>
-
-<form id="chat-form">
-    <input type="text"  placeholder="Введите сообщение...">
-    <button >Отправить</button>
-</form>
-
-<script type="module">
-
-
-
-</script>
-
-<script type="module" defer>
-    const userId = adapter.browserDetails.browser;
-    const isHost = userId === 'chrome';
-
-    import { useWebSocket } from "./useWebSocket.js";
-    import { useWebRTC } from "./useWebRTC.js";
-
-    const { connectToWebSocket, sendWebSocketMessage, setupWebSocketMessageHandlers } = useWebSocket();
-    const { createPeerOffer, onPeerOffer, onPeerAnswer, sendWebRTCMessage, onIceCandidate, createPeerAnswer } = useWebRTC(sendWebSocketMessage);
-
-    await connectToWebSocket();
-
-    setupWebSocketMessageHandlers({
-        'ice-candidate':[ onIceCandidate], // Обработка ICE кандидатов
-        'answer': [onPeerAnswer],
-        'offer': [onPeerOffer,createPeerAnswer],
-    });
-
-
-    document.getElementById('create-offer').onclick = createPeerOffer// Хост создает предложение
-
-
-    const chatForm = document.getElementById('chat-form');
-
-    const onChatFormSubmit = async (e) => {
-        e.preventDefault();
-        const input = e.target.querySelector('input');
-        const message = input.value;
-
-        sendWebRTCMessage(message); // Отправляем сообщение через WebRTC
-
-        input.value = ''; // Очищаем поле ввода
-    };
-
-    chatForm.addEventListener('submit', onChatFormSubmit);
-</script>
+    <h1>Видеозвонок</h1>
+    <video id="localVideo" autoplay muted></video>
+    <video id="remoteVideo" autoplay></video>
+    <button id="startCall">Начать звонок</button>
+    <script type="module" src="app.js"></script>
 </body>
 </html>

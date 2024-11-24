@@ -1,43 +1,34 @@
 // server.js
 const express = require('express');
-const WebSocket = require('ws');
 const http = require('http');
+const WebSocket = require('ws');
 
 const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
-app.use(express.static('public')); // Папка для статических файлов (например, index.html)
-
-const wsClients = []
+app.use(express.static('public'));
 
 wss.on('connection', (ws) => {
-    console.log('Новое соединение');
+    console.log('Новый пользователь подключен');
 
     ws.on('message', (message) => {
-        const {type,from} = JSON.parse(message)
-        console.log('msg  type ', type , 'from', from)
-        // Распространяем сообщение всем подключенным клиентам
-
-
-
+        const data = JSON.parse(message)
+        console.log(data.type)
+        // Рассылаем сообщение всем подключенным клиентам
         wss.clients.forEach((client) => {
-
-            const a = (type === 'ice-candidate' || client !== ws  )
-
-            if ( client.readyState === WebSocket.OPEN && a ) {
-                client.send(JSON.stringify(JSON.parse(message)));
+            if (client !== ws && client.readyState === WebSocket.OPEN) {
+                client.send(JSON.stringify(data));
             }
         });
     });
 
     ws.on('close', () => {
-        console.log('Соединение закрыто');
+        console.log('Пользователь отключился');
     });
 });
 
-// Запуск сервера
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
     console.log(`Сервер запущен на http://localhost:${PORT}`);
 });
