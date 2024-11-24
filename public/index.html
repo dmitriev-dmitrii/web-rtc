@@ -99,13 +99,13 @@
         const  onPeerOffer = async (message)=> {
 
             await peerConnection.setRemoteDescription(new RTCSessionDescription(message.offer));
-            const answer = await peerConnection.createAnswer();
-            await peerConnection.setLocalDescription(answer);
-            socket.send(JSON.stringify({ type: 'answer', answer }));
+
 
         }
         const createPeerAnswer = async ()=>{
-
+            const answer = await peerConnection.createAnswer();
+            await peerConnection.setLocalDescription(answer);
+            socket.send(JSON.stringify({ type: 'answer', answer }));
         }
         const onPeerAnswer = async (message)=>{
             await peerConnection.setRemoteDescription(new RTCSessionDescription(message.answer));
@@ -117,6 +117,7 @@
 
                 if (message.type === 'offer') {
                  await   onPeerOffer(message)
+                 await  createPeerAnswer()
                     return
                 }
                 if (message.type === 'answer') {
@@ -134,43 +135,6 @@
 
         startCallButton.addEventListener('click', createPeerOffer);
 
-
-
-
-        // const userId = adapter.browserDetails.browser;
-        // const isHost = userId === 'chrome';
-
-        import { useWebSocket } from "./useWebSocket.js";
-        import { useWebRTC } from "./useWebRTC.js";
-
-        // const { connectToWebSocket, sendWebSocketMessage, setupWebSocketMessageHandlers } = useWebSocket();
-        // const { createPeerOffer, onPeerOffer, onPeerAnswer, sendWebRTCMessage, handleIceCandidate, createPeerAnswer } = useWebRTC(sendWebSocketMessage);
-        //
-        // await connectToWebSocket();
-        //
-        // setupWebSocketMessageHandlers({
-        //     'ice-candidate':[ handleIceCandidate], // Обработка ICE кандидатов
-        //     'answer': [onPeerAnswer],
-        //     'offer': [onPeerOffer,createPeerAnswer],
-        // });
-        //
-        //
-        // document.getElementById('create-offer').onclick = createPeerOffer// Хост создает предложение
-        //
-        //
-        // const chatForm = document.getElementById('chat-form');
-        //
-        // const onChatFormSubmit = async (e) => {
-        //     e.preventDefault();
-        //     const input = e.target.querySelector('input');
-        //     const message = input.value;
-        //
-        //     sendWebRTCMessage(message); // Отправляем сообщение через WebRTC
-        //
-        //     input.value = ''; // Очищаем поле ввода
-        // };
-        //
-        // chatForm.addEventListener('submit', onChatFormSubmit);
     </script>
 </body>
 </html>
