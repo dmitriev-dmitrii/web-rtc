@@ -32,12 +32,12 @@
     import { useWebRTC } from "./useWebRTC.js";
 
     const { connectToWebSocket, sendWebSocketMessage, setupWebSocketMessageHandlers } = useWebSocket();
-    const { createPeerOffer, onPeerOffer, onPeerAnswer, sendWebRTCMessage, handleIceCandidate, createPeerAnswer } = useWebRTC(sendWebSocketMessage);
+    const { createPeerOffer, onPeerOffer, onPeerAnswer, sendWebRTCMessage, onIceCandidate, createPeerAnswer } = useWebRTC(sendWebSocketMessage);
 
     await connectToWebSocket();
 
     setupWebSocketMessageHandlers({
-        'ice-candidate':[ handleIceCandidate], // Обработка ICE кандидатов
+        'ice-candidate':[ onIceCandidate], // Обработка ICE кандидатов
         'answer': [onPeerAnswer],
         'offer': [onPeerOffer,createPeerAnswer],
     });

@@ -21,8 +21,9 @@ export const useWebRTC = (sendWebSocketMessage) => {
 
 
     peerConnection.oniceconnectionstatechange = async () => {
-        console.log('ICE connection state changed to:', peerConnection.iceConnectionState);
+
         statusMark.innerText = peerConnection.connectionState
+
         if (peerConnection.connectionState === 'connected') {
             await  createDataChannel();
         }
@@ -31,6 +32,8 @@ export const useWebRTC = (sendWebSocketMessage) => {
     let dataChannel;
 
     async function createDataChannel (){
+        try {
+       
         console.log('createDataChannel')
 
         dataChannel = await peerConnection.createDataChannel('chat');
@@ -46,38 +49,54 @@ export const useWebRTC = (sendWebSocketMessage) => {
         dataChannel.onmessage = (event) => {
             console.log('Message from peer:', event.data);
         };
-
+    } catch (error) {
+        console.log('createDataChannel err', error)
+    }
     };
 
     const createPeerOffer = async () => {
         try {
-            console.log('Creating peer offer...');
+            console.log('createPeerOffer');
             const offer = await peerConnection.createOffer();
             await peerConnection.setLocalDescription(offer);
             sendWebSocketMessage({ type: 'offer', data: offer });
         } catch (error) {
-            console.error('Error creating offer or setting local description:', error);
+            console.error('createPeerOffer err', error);
         }
     };
 
     const onPeerOffer = async ({ data }) => {
-        console.log('Received peer offer:');
-
-        await peerConnection.setRemoteDescription(new RTCSessionDescription(data));
+        try {
+            console.log('onPeerOffer');
+            await peerConnection.setRemoteDescription( new RTCSessionDescription(data) );
+        } catch (error) {
+            console.log('onPeerOffer' , error);
+        
+        }
 
     };
 
     const createPeerAnswer = async () => {
-        console.log('createPeerAnswer:');
-        const answer = await peerConnection.createAnswer();
-        await peerConnection.setLocalDescription(answer);
+        try {
+            console.log('createPeerAnswer:');
+            const answer = await peerConnection.createAnswer();
+            await peerConnection.setLocalDescription(answer);
+    
+            sendWebSocketMessage({ type: 'answer', data: answer });
+        } catch (error) {
+            console.log('createPeerAnswererr  ', error);
+        }
 
-        sendWebSocketMessage({ type: 'answer', data: answer });
     };
 
     const onPeerAnswer = async ({ data }) => {
-        console.log('Received peer answer:');
-        await peerConnection.setRemoteDescription(new RTCSessionDescription(data));
+        try {
+            console.log('onPeerAnswer');
+            await peerConnection.setRemoteDescription( await new RTCSessionDescription(data) );
+        } catch (error) {
+            console.log('onPeerAnswer err  ', error);
+        }
+
     };
 
     const sendWebRTCMessage = (message) => {
@@ -90,17 +109,15 @@ export const useWebRTC = (sendWebSocketMessage) => {
         console.log('Data channel is not open');
     };
 
-    const handleIceCandidate = async ({data, from }) => {
+    const onIceCandidate = async ({data, from }) => {
 
-        console.log('handleIceCandidate')
-
-        if (peerConnection.remoteDescription && from !== userId) {
-            await peerConnection.addIceCandidate(new RTCIceCandidate(data));
-            console.log('ICE candidate added.');
-            return
+        console.log('onIceCandidate', from)
+        try {
+            const candidate = await new RTCIceCandidate(data)
+            await peerConnection.addIceCandidate(candidate);
+        } catch (error) {
+            console.log('onIceCandidate err', error)
         }
-
-        console.log('ICE candidate received before remote description is set.');
 
     };
 
@@ -112,6 +129,6 @@ export const useWebRTC = (sendWebSocketMessage) => {
         createPeerAnswer,
         onPeerAnswer,
         sendWebRTCMessage,
-        handleIceCandidate,
+        onIceCandidate,
     };
 };

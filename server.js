@@ -15,12 +15,17 @@ wss.on('connection', (ws) => {
     console.log('Новое соединение');
 
     ws.on('message', (message) => {
-        console.log('msg', message.type , message.from)
+        const {type,from} = JSON.parse(message)
+        console.log('msg  type ', type , 'from', from)
         // Распространяем сообщение всем подключенным клиентам
+
+
+
         wss.clients.forEach((client) => {
 
+            const a = (type === 'ice-candidate' || client !== ws  )
 
-            if (client.readyState === WebSocket.OPEN && client !== ws) {
+            if ( client.readyState === WebSocket.OPEN && a ) {
                 client.send(JSON.stringify(JSON.parse(message)));
             }
         });
@@ -32,7 +37,7 @@ wss.on('connection', (ws) => {
 });
 
 // Запуск сервера
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
     console.log(`Сервер запущен на http://localhost:${PORT}`);
 });

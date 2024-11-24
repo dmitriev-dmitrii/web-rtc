@@ -40,12 +40,15 @@ export const useWebSocket = () => {
         }
     };
 
-    const setupWebSocketMessageHandlers = (eventsMap) => {
+    const setupWebSocketMessageHandlers = (eventsMap = { } ) => {
         if (!Object.keys(eventsMap).length) {
             return;
         }
 
-        for (const [type, callbacksArr] of Object.entries(eventsMap)) {
+        for (const [type, callbacks] of Object.entries(eventsMap)) {
+
+            const callbacksArr = [].concat(callbacks)
+
             webSocketMessageHandlersMap.set(type , new Set(callbacksArr));
         }
     };
