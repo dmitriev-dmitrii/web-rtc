@@ -7,92 +7,58 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/webrtc-adapter/9.0.1/adapter.min.js" integrity="sha512-NVplxpmGbQ9r63C108KdM/bKT1mV1K+oUFkhCKwTBuD9LhcABwPoGFoiujBs0lPJQSp6SLNkUBYg9zTliIwdVQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 </head>
 <body>
-    <h1>WebRTC <div id="status"></div></h1>
+<h1>WebRTC status: <span id="status"></span></h1>
 
-    <button >createPeerOffer</button>
+<button id="create-offer">
+    create offer
+</button>
 
-    <form id="chat-form">
-        <input type="text"  placeholder="Введите сообщение...">
-        <button >Отправить</button>
-    </form>
+<form id="chat-form">
+    <input type="text"  placeholder="Введите сообщение...">
+    <button >Отправить</button>
+</form>
 
-    <script type="module">
-        const userId = adapter.browserDetails.browser
-        const isHost =  userId === 'chrome'
-
-        import {useWebSocket} from "./useWebSocket.js";
-        import {useWebRTC} from "./useWebRTC.js";
-
-        const {connectToWebSocket , sendWebSocketMessage , setupWebSocketMessageHandlers} = useWebSocket()
-        const {  createPeerOffer , onPeerOffer ,  onPeerAnswer , sendWebRtcMessage } = useWebRTC()
-
-        await connectToWebSocket()
-
-
-        if ( isHost ) {
-            const answerCallback = async ( payload )=> {
-              await  onPeerAnswer( payload )
+<script type="module">
 
 
 
+</script>
 
-            }
+<script type="module" defer>
+    const userId = adapter.browserDetails.browser;
+    const isHost = userId === 'chrome';
 
-            setupWebSocketMessageHandlers({
-                ['peer-answer']:[ answerCallback ],
-            })
+    import { useWebSocket } from "./useWebSocket.js";
+    import { useWebRTC } from "./useWebRTC.js";
 
-            const {localDescription}  =  await createPeerOffer()
+    const { connectToWebSocket, sendWebSocketMessage, setupWebSocketMessageHandlers } = useWebSocket();
+    const { createPeerOffer, onPeerOffer, onPeerAnswer, sendWebRTCMessage, handleIceCandidate, createPeerAnswer } = useWebRTC(sendWebSocketMessage);
 
-            sendWebSocketMessage({
-                from: userId,
-                type: 'peer-offer',
-                data: localDescription
-            });
+    await connectToWebSocket();
 
-
-        }
-
-        if ( !isHost ) {
-
-            const cb = async ( payload)=>{
-
-               const {localDescription}  =   await  onPeerOffer( payload )
-
-                sendWebSocketMessage({
-                    from: userId,
-                    type: 'peer-answer',
-                    data: localDescription
-                });
-            }
+    setupWebSocketMessageHandlers({
+        'ice-candidate':[ handleIceCandidate], // Обработка ICE кандидатов
+        'answer': [onPeerAnswer],
+        'offer': [onPeerOffer,createPeerAnswer],
+    });
 
 
-            setupWebSocketMessageHandlers({
-                ['peer-offer']:[ cb ],
-            })
-
-        }
+    document.getElementById('create-offer').onclick = createPeerOffer// Хост создает предложение
 
 
-    </script>
+    const chatForm = document.getElementById('chat-form');
 
-    <script type="module" defer>
-        import {useWebRTC} from "./useWebRTC.js";
-        const {   sendWebRtcMessage } = useWebRTC()
-        const chatForm = document.getElementById('chat-form')
-        console.log(chatForm    )
-        const onChatFormSubmit = (e)=>{
+    const onChatFormSubmit = async (e) => {
+        e.preventDefault();
+        const input = e.target.querySelector('input');
+        const message = input.value;
 
-           e.preventDefault()
+        sendWebRTCMessage(message); // Отправляем сообщение через WebRTC
 
-           const input  =   e.target.querySelector('input')
+        input.value = ''; // Очищаем поле ввода
+    };
 
-            sendWebRtcMessage( input.value   )
-
-            input.value = ''
-        }
-        chatForm.addEventListener('submit',onChatFormSubmit)
-
-    </script>
+    chatForm.addEventListener('submit', onChatFormSubmit);
+</script>
 </body>
 </html>
