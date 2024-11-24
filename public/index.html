@@ -83,11 +83,32 @@
         }
 
 
-        async function startCall() {
+
+
+        async function createPeerOffer() {
 
             const offer = await peerConnection.createOffer();
             await peerConnection.setLocalDescription(offer);
             socket.send(JSON.stringify({ type: 'offer', offer }));
+        }
+
+        const onIceCandidate = async (message)=> {
+            await peerConnection.addIceCandidate(new RTCIceCandidate(message.candidate));
+        }
+
+        const  onPeerOffer = async (message)=> {
+
+            await peerConnection.setRemoteDescription(new RTCSessionDescription(message.offer));
+            const answer = await peerConnection.createAnswer();
+            await peerConnection.setLocalDescription(answer);
+            socket.send(JSON.stringify({ type: 'answer', answer }));
+
+        }
+        const createPeerAnswer = async ()=>{
+
+        }
+        const onPeerAnswer = async (message)=>{
+            await peerConnection.setRemoteDescription(new RTCSessionDescription(message.answer));
         }
 
         socket.onmessage = async (event) => {
@@ -95,28 +116,23 @@
                 const message = JSON.parse(event.data);
 
                 if (message.type === 'offer') {
-
-                    await peerConnection.setRemoteDescription(new RTCSessionDescription(message.offer));
-                    const answer = await peerConnection.createAnswer();
-                    await peerConnection.setLocalDescription(answer);
-                    socket.send(JSON.stringify({ type: 'answer', answer }));
+                 await   onPeerOffer(message)
                     return
                 }
                 if (message.type === 'answer') {
-                    peerConnection.setRemoteDescription(new RTCSessionDescription(message.answer));
+                   await onPeerAnswer(message)
                     return
                 }
 
                 if (message.type === 'ice-candidate') {
-                    peerConnection.addIceCandidate(new RTCIceCandidate(message.candidate));
-                    return
+                    await onIceCandidate(message)
                 }
             } catch (error) {
                 console.error('Ошибка при обработке сообщения:', error);
             }
         };
 
-        startCallButton.addEventListener('click', startCall);
+        startCallButton.addEventListener('click', createPeerOffer);
 
 
 
