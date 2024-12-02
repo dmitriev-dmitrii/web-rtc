@@ -6,24 +6,42 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/webrtc-adapter/8.2.0/adapter.js"></script>
 </head>
 <body>
-    <h1>Web-RTC status:</h1>
+    <h1>Web-RTC</h1>
     <ol id="statusList"></ol>
     <div id="videoStreamsElement">
         <video id="localVideo" autoplay muted></video>
         <video id="remoteVideo" autoplay muted></video>
-
     </div>
     <button id="startCall">createOffer</button>
 
+
+
+        <form id="webRtcChatForm">
+            <h2>Web-RTC chat</h2>
+            <ul id="webRtcChatMessageList"></ul>
+            <input type="text" id="webRtcChatInput" placeholder="Введите сообщение" required />
+            <button type="submit">Отправить</button>
+        </form>
+
+    </div>
+
     <script type="module" defer>
-        const statusList = document.getElementById('statusList');
-        const localVideo = document.getElementById('localVideo');
-        const remoteVideo = document.getElementById('remoteVideo');
-        const startCallButton = document.getElementById('startCall');
         const socket = new WebSocket(`ws://${window.location.host}`);
 
+        const statusList = document.getElementById('statusList');
+
+        const localVideo = document.getElementById('localVideo');
+        const remoteVideo = document.getElementById('remoteVideo');
+
+        const startCallButton = document.getElementById('startCall');
+
+        const webRtcChatForm = document.getElementById('webRtcChatForm');
+        const webRtcChatInput = document.getElementById('webRtcChatInput');
+        const webRtcChatMessageList = document.getElementById('webRtcChatMessageList');
 
         const userId = adapter.browserDetails.browser
+
+
 
         const configuration = {
             iceServers: [
@@ -33,6 +51,11 @@
 
         const peerConnection = new RTCPeerConnection(configuration);
 
+        const localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        localVideo.srcObject = localStream;
+        localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+
+
         const printPeerConnectionState = ()=> {
             const li = document.createElement('li')
             li.innerText = peerConnection.connectionState
@@ -40,14 +63,32 @@
             statusList.append(li)
         }
 
-        printPeerConnectionState()
+        function printChatMessage(message) {
+            const messageElement = document.createElement('li');
+            messageElement.textContent = message;
+            webRtcChatMessageList.appendChild(messageElement);
+        }
 
+        const setupChanelEvents =  (channel)=> {
 
+            channel.onmessage = (event) => {
+                console.log('event',event)
+                printChatMessage(  event.data );
+            };
 
-       const localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        localVideo.srcObject = localStream;
-        // adapter.browserDetails.browser
-        localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+            webRtcChatForm.addEventListener('submit', (event) => {
+                event.preventDefault();
+                const message = `${userId}: ${webRtcChatInput.value}` ;
+                channel.send(message); // Отправка сообщения через DataChannel
+                printChatMessage(message); // Отображение отправленного сообщения
+                webRtcChatInput.value = ''; // Очистка поля ввода
+            });
+
+        }
+
+        peerConnection.ondatachannel = (event) => {
+            setupChanelEvents(event.channel)
+        };
 
         peerConnection.ontrack = (event) => {
             remoteVideo.srcObject = event.streams[0];
@@ -59,22 +100,13 @@
             if (event.candidate) {
                 socket.send(JSON.stringify({ type: 'ice-candidate', candidate: event.candidate }));
             }
-        };
 
+        };
 
         peerConnection.onconnectionstatechange = (e)=>{
             printPeerConnectionState()
         }
 
-        //
-        //
-        // peerConnection.onaddstream
-        // peerConnection.onremovestream
-        //
-        // peerConnection.ondatachannel = ()=>{
-        //     console.log(' ondatachannel ')
-        // }
-        //
         // peerConnection.onicecandidateerror = ()=>{
         //     console.log(' onicecandidateerror ')
         // }
@@ -114,7 +146,6 @@
 
             await peerConnection.setRemoteDescription(new RTCSessionDescription(message.offer));
 
-
         }
         const createPeerAnswer = async ()=>{
             const answer = await peerConnection.createAnswer();
@@ -130,7 +161,7 @@
                 const message = JSON.parse(event.data);
 
                 if (message.type === 'offer') {
-                 await   onPeerOffer(message)
+                 await  onPeerOffer(message)
                  await  createPeerAnswer()
                     return
                 }
@@ -147,7 +178,19 @@
             }
         };
 
-        startCallButton.addEventListener('click', createPeerOffer);
+
+
+        startCallButton.addEventListener('click', async ()=> {
+
+            printPeerConnectionState()
+            const  channel = peerConnection.createDataChannel(`${userId}-chat` );
+            setupChanelEvents(channel)
+
+            await createPeerOffer()
+
+        });
+
+
 
     </script>
 
@@ -171,6 +214,23 @@
                 border:2px solid royalblue;
             }
 
+            #messageContainer {
+                margin-top: 20px;
+            }
+            #webRtcChatInput {
+                height: 1.75rem;
+                padding: .25rem 1rem;
+                border-radius: 5px;
+                border: 1px solid currentColor;
+            }
+
+            button {
+                height: 1.75rem;
+                padding: .25rem 1rem;
+                border-radius: 5px;
+                border: 1px solid currentColor;
+                cursor: pointer;
+            }
 
         </style>
 </body>
