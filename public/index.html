@@ -3,27 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <title> Web-RTC  </title>
-    <style>
-        video {
-            width: 45%;
-            margin: 5px;
-        }
-    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/webrtc-adapter/8.2.0/adapter.js"></script>
 </head>
 <body>
-    <h1>Web-RTC status: <span id="status"></span></h1>
-    <video id="localVideo" autoplay muted></video>
-    <video id="remoteVideo" autoplay></video>
+    <h1>Web-RTC status:</h1>
+    <ol id="statusList"></ol>
+    <div id="videoStreamsElement">
+        <video id="localVideo" autoplay muted></video>
+        <video id="remoteVideo" autoplay muted></video>
+
+    </div>
     <button id="startCall">createOffer</button>
 
     <script type="module" defer>
+        const statusList = document.getElementById('statusList');
         const localVideo = document.getElementById('localVideo');
         const remoteVideo = document.getElementById('remoteVideo');
         const startCallButton = document.getElementById('startCall');
-
         const socket = new WebSocket(`ws://${window.location.host}`);
-        let localStream;
 
+
+        const userId = adapter.browserDetails.browser
 
         const configuration = {
             iceServers: [
@@ -31,11 +31,22 @@
             ]
         };
 
-        let peerConnection = new RTCPeerConnection(configuration);
+        const peerConnection = new RTCPeerConnection(configuration);
 
-        localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        const printPeerConnectionState = ()=> {
+            const li = document.createElement('li')
+            li.innerText = peerConnection.connectionState
+
+            statusList.append(li)
+        }
+
+        printPeerConnectionState()
+
+
+
+       const localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         localVideo.srcObject = localStream;
-
+        // adapter.browserDetails.browser
         localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
 
         peerConnection.ontrack = (event) => {
@@ -49,13 +60,16 @@
                 socket.send(JSON.stringify({ type: 'ice-candidate', candidate: event.candidate }));
             }
         };
-        // peerConnection.onconnectionstatechange = (e)=>{
-        //     console.log('onconnectionstatechange', e)
-        // }
+
+
+        peerConnection.onconnectionstatechange = (e)=>{
+            printPeerConnectionState()
+        }
+
         //
         //
-        // // peerConnection.onaddstream
-        // // peerConnection.onremovestream
+        // peerConnection.onaddstream
+        // peerConnection.onremovestream
         //
         // peerConnection.ondatachannel = ()=>{
         //     console.log(' ondatachannel ')
@@ -136,5 +150,28 @@
         startCallButton.addEventListener('click', createPeerOffer);
 
     </script>
+
+        <style>
+            *{
+                box-sizing: border-box;
+            }
+
+            .videoStreamsElement {
+                display: flex;
+                align-self: center;
+                gap: 2rem;
+            }
+            video {
+                border-radius:10px;
+                max-width: 400px;
+                max-height: 300px;
+            }
+
+            #localVideo {
+                border:2px solid royalblue;
+            }
+
+
+        </style>
 </body>
 </html>
