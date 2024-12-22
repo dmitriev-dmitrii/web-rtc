@@ -9,9 +9,7 @@
     <h1>Web-RTC</h1>
     <ol id="statusList"></ol>
 
-    <button id="startCall">createOffer</button>
-
-
+    <button id="startCall"> startCall </button>
 
         <form id="webRtcChatForm">
             <h2>Web-RTC chat</h2>
@@ -23,7 +21,9 @@
     </div>
 
     <script type="module" defer>
-        const socket = new WebSocket(`ws://${window.location.host}`);
+        const userId = adapter.browserDetails.browser
+
+        const socket = new WebSocket(`ws://${window.location.host}/?hui=${ userId }&userId=${ userId }`);
 
         const statusList = document.getElementById('statusList');
 
@@ -36,7 +36,6 @@
         const peerConnections = {}; // Хранение всех соединений
         const channels = {}; // Хранение всех каналов данных
 
-        const userId = adapter.browserDetails.browser
 
         const configuration = {
             iceServers: [
@@ -45,15 +44,13 @@
         };
 
         peerConnections[userId] = new RTCPeerConnection(configuration);
-        channels[userId] = peerConnections[userId].createDataChannel(`${userId}-chat`);
-
+        channels[userId] = peerConnections[userId].createDataChannel(`${userId}`);
 
 
         const printPeerConnectionState = (event)=> {
             const li = document.createElement('li')
             li.innerText = event.currentTarget.connectionState
             statusList.append(li)
-
         }
 
         function printChatMessage(message) {
@@ -72,16 +69,17 @@
         });
 
         peerConnections[userId].ondatachannel = (event) => {
-            console.log( 'ondatachannel' , event)
+
             event.channel.onmessage = (event) => {
-                console.log('event', event);
                 printChatMessage(event.data);
             };
+
+            printChatMessage(event.channel.label + ' connected')
         };
 
         peerConnections[userId].onicecandidate = (event) => {
             if (event.candidate) {
-                socket.send(JSON.stringify({ type: 'ice-candidate', candidate: event.candidate, userId: userId }));
+                socket.send(JSON.stringify({ type: 'ice-candidate', candidate: event.candidate }));
             }
         };
 
@@ -92,10 +90,11 @@
         async function createPeerOffer() {
 
             const offer = await peerConnections[userId].createOffer();
-            await peerConnections[userId].setLocalDescription(offer);
-
-            socket.send(JSON.stringify({ type: 'offer', offer }));
+            await peerConnections[userId].setLocalDescription(offer)
+            return offer
+            // socket.send(JSON.stringify({ type: 'offer', offer }));
         }
+
 
         const onIceCandidate = async (message)=> {
             await peerConnections[userId].addIceCandidate(new RTCIceCandidate(message.candidate));
@@ -104,24 +103,25 @@
         const  onPeerOffer = async (message)=> {
             await peerConnections[userId].setRemoteDescription(new RTCSessionDescription(message.offer));
         }
-        const createPeerAnswer = async ()=>{
+        const createPeerAnswer = async ()=> {
             const answer = await peerConnections[userId].createAnswer();
             await peerConnections[userId].setLocalDescription(answer);
             socket.send(JSON.stringify({ type: 'answer', answer }));
         }
-        const onPeerAnswer = async (message)=>{
+        const onPeerAnswer = async (message)=> {
             await peerConnections[userId].setRemoteDescription(new RTCSessionDescription(message.answer));
         }
 
         const onNewUser = (message) => {
 
-            const newUserId = message.userId;
+            const {newUserId} = message;
+            console.log('socket on new user', message)
             peerConnections[newUserId] = new RTCPeerConnection(configuration);
 
             // Обработка ICE кандидатов
             peerConnections[newUserId].onicecandidate = (event) => {
                 if (event.candidate) {
-                    socket.send(JSON.stringify({ type: 'ice-candidate', candidate: event.candidate, userId: newUserId }));
+                    socket.send(JSON.stringify({ type: 'ice-candidate', candidate: event.candidate, newUserId }));
                 }
             };
 
@@ -131,11 +131,11 @@
             try {
                 const message = JSON.parse(event.data);
 
-                if (message.type === 'offer') {
-                    await  onPeerOffer(message)
-                    await  createPeerAnswer()
-                    return
-                }
+                // if (message.type === 'offer') {
+                //     await  onPeerOffer(message)
+                //     await  createPeerAnswer()
+                //     return
+                // }
 
                 if (message.type === 'answer') {
                    await onPeerAnswer(message)
@@ -151,15 +151,32 @@
                     onNewUser(message);
                 }
             } catch (error) {
-                console.error('Ошибка при обработке сообщения:', error);
+                console.error('Ошибка при обработке ws сообщения:', error);
             }
         };
 
-
-
         startCallButton.addEventListener('click', async ()=> {
 
-            await createPeerOffer()
+
+            const res = await  fetch('/offers')
+            const data = await res.json()
+
+            for (const [key, value] of Object.entries(data)) {
+                if (key !== userId ) {
+                  await  onPeerOffer(value)
+                  await  createPeerAnswer()
+                }
+            }
+
+            const offer = await createPeerOffer()
+
+            await fetch('/offers', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json;charset=utf-8'
+                },
+                body: JSON.stringify({ type: 'offer', offer , userId })
+            });
 
         });
 
