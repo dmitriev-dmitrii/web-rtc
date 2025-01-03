@@ -6,181 +6,176 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/webrtc-adapter/8.2.0/adapter.js"></script>
 </head>
 <body>
-    <h1>Web-RTC</h1>
+    <h1 style="text-align: center">Web-RTC</h1>
+    <h2>wsOnlineCount : <span id="wsOnlineCount"></span></h2>
     <ol id="statusList"></ol>
 
-    <button id="startCall"> startCall </button>
+    <button id="web-rtc-connect"> web rtc  create offer </button>
+
+    <div id="web-rtc-offers">
+        <h4>web-rtc-offers :</h4>
+    </div>
+
+    <fieldset id="webRtcChat">
+
+        <legend>Web-RTC chat</legend>
+
+        <div id="webRtcChatMessages"></div>
 
         <form id="webRtcChatForm">
-            <h2>Web-RTC chat</h2>
-            <ul id="webRtcChatMessageList"></ul>
+            <ul id="webRtcChatOnlineUsers"></ul>
             <input type="text" id="webRtcChatInput" placeholder="Введите сообщение" required />
             <button type="submit">Отправить</button>
         </form>
 
+    </fieldset>
+
+
+
+</div>
+
+
     </div>
 
+    
     <script type="module" defer>
-        const userId = adapter.browserDetails.browser
 
-        const socket = new WebSocket(`ws://${window.location.host}/?hui=${ userId }&userId=${ userId }`);
+        window.userId = adapter.browserDetails.browser
+
+        import {setupOnWsMessageHandlers, sendWsMessage} from "./ws.js";
+
+        import {useWebRtc} from "./web-rtc.js";
 
         const statusList = document.getElementById('statusList');
-
-        const startCallButton = document.getElementById('startCall');
+        const wsOnlineCount = document.getElementById('wsOnlineCount');
+        const connectButton = document.getElementById('web-rtc-connect');
+        const webRtcOffers = document.getElementById('web-rtc-offers');
 
         const webRtcChatForm = document.getElementById('webRtcChatForm');
         const webRtcChatInput = document.getElementById('webRtcChatInput');
         const webRtcChatMessageList = document.getElementById('webRtcChatMessageList');
 
-        const peerConnections = {}; // Хранение всех соединений
-        const channels = {}; // Хранение всех каналов данных
+
+        let offers = {}
+
+        webRtcOffers.addEventListener('click', async  (e)=> {
+
+            const currentOffer = offers[e.target.id]
 
 
-        const configuration = {
-            iceServers: [
-                { urls: 'stun:stun.l.google.com:19302' }
-            ]
-        };
-
-        peerConnections[userId] = new RTCPeerConnection(configuration);
-        channels[userId] = peerConnections[userId].createDataChannel(`${userId}`);
-
-
-        const printPeerConnectionState = (event)=> {
-            const li = document.createElement('li')
-            li.innerText = event.currentTarget.connectionState
-            statusList.append(li)
-        }
-
-        function printChatMessage(message) {
-            const messageElement = document.createElement('li');
-            messageElement.textContent = message;
-            webRtcChatMessageList.appendChild(messageElement);
-        }
-
-
-        webRtcChatForm.addEventListener('submit', (event) => {
-            event.preventDefault();
-            const message = `${userId}: ${webRtcChatInput.value}`;
-            channels[userId].send(message); // Отправка сообщения через DataChannel
-            printChatMessage(message); // Отображение отправленного сообщения
-            webRtcChatInput.value = ''; // Очистка поля ввода
-        });
-
-        peerConnections[userId].ondatachannel = (event) => {
-
-            event.channel.onmessage = (event) => {
-                printChatMessage(event.data);
-            };
-
-            printChatMessage(event.channel.label + ' connected')
-        };
-
-        peerConnections[userId].onicecandidate = (event) => {
-            if (event.candidate) {
-                socket.send(JSON.stringify({ type: 'ice-candidate', candidate: event.candidate }));
+            if (!currentOffer) {
+                return
             }
-        };
 
-        peerConnections[userId].onconnectionstatechange = (e)=> {
-            printPeerConnectionState(e)
-        }
+            const  answer =   await  confirmPeerOffer(currentOffer)
 
-        async function createPeerOffer() {
-
-            const offer = await peerConnections[userId].createOffer();
-            await peerConnections[userId].setLocalDescription(offer)
-            return offer
-            // socket.send(JSON.stringify({ type: 'offer', offer }));
-        }
-
-
-        const onIceCandidate = async (message)=> {
-            await peerConnections[userId].addIceCandidate(new RTCIceCandidate(message.candidate));
-        }
-
-        const  onPeerOffer = async (message)=> {
-            await peerConnections[userId].setRemoteDescription(new RTCSessionDescription(message.offer));
-        }
-        const createPeerAnswer = async ()=> {
-            const answer = await peerConnections[userId].createAnswer();
-            await peerConnections[userId].setLocalDescription(answer);
-            socket.send(JSON.stringify({ type: 'answer', answer }));
-        }
-        const onPeerAnswer = async (message)=> {
-            await peerConnections[userId].setRemoteDescription(new RTCSessionDescription(message.answer));
-        }
-
-        const onNewUser = (message) => {
-
-            const {newUserId} = message;
-            console.log('socket on new user', message)
-            peerConnections[newUserId] = new RTCPeerConnection(configuration);
-
-            // Обработка ICE кандидатов
-            peerConnections[newUserId].onicecandidate = (event) => {
-                if (event.candidate) {
-                    socket.send(JSON.stringify({ type: 'ice-candidate', candidate: event.candidate, newUserId }));
-                }
-            };
-
-        };
-
-        socket.onmessage = async (event) => {
-            try {
-                const message = JSON.parse(event.data);
-
-                // if (message.type === 'offer') {
-                //     await  onPeerOffer(message)
-                //     await  createPeerAnswer()
-                //     return
-                // }
-
-                if (message.type === 'answer') {
-                   await onPeerAnswer(message)
-                   return
-                }
-
-                if (message.type === 'ice-candidate') {
-                   await onIceCandidate(message)
-                   return;
-                }
-
-                if (message.type === 'new-user') {
-                    onNewUser(message);
-                }
-            } catch (error) {
-                console.error('Ошибка при обработке ws сообщения:', error);
+            const payload = {
+                type:'answer',
+                data: answer,
+                to: e.target.id
             }
-        };
 
-        startCallButton.addEventListener('click', async ()=> {
+            sendWsMessage(payload)
+        })
 
 
-            const res = await  fetch('/offers')
-            const data = await res.json()
+        const updateWsOnlineCount = ({data})=> {
+            wsOnlineCount.innerText = data.wsClientsOnline
+        }
 
-            for (const [key, value] of Object.entries(data)) {
-                if (key !== userId ) {
-                  await  onPeerOffer(value)
-                  await  createPeerAnswer()
-                }
-            }
+        const printChatMessage = ()=> {
+
+        }
+
+        connectButton.addEventListener('click', async ()=> {
+
+            // const res = await  fetch('/offers')
+            // const data = await res
+
+            // for (const [key, value] of Object.entries(data)) {
+            //     if (key !== userId ) {
+            //       await  onPeerOffer(value)
+            //       await  confirmPeerOffer()
+            //     }
+            // }
 
             const offer = await createPeerOffer()
 
-            await fetch('/offers', {
+            offers  =   await (await fetch('/offers', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json;charset=utf-8'
                 },
-                body: JSON.stringify({ type: 'offer', offer , userId })
-            });
+                body: JSON.stringify({offer, userId})
+            })).json();
+
+            for ( const key of Object.keys(offers)) {
+                if (key !== userId ) {
+                   const offerButton =  document.createElement('button')
+                   offerButton.setAttribute('id', key)
+                   offerButton.innerText = `connect to [${key}] `
+                   webRtcOffers.append(offerButton)
+                }
+            }
 
         });
 
 
+       const  onDataChanel = (payload)=> {
+           console.log('onDataChanel payload', payload)
+           printChatMessage('onDataChanel')
+        }
+
+        const onDataChanelMessage = ({ data , from , type })=> {
+
+           if (type === 'text-message') {
+               printChatMessage(`[${from}] : [${data.text}]`)
+           }
+
+        }
+
+
+        const {
+            createPeerOffer,
+            confirmPeerOffer,
+            sendDataChanelMessage,
+            onPeerAnswer,
+        } =  useWebRtc({
+
+            onDataChanel,
+            onDataChanelMessage,
+        })
+
+
+
+        setupOnWsMessageHandlers({
+            'answer': onPeerAnswer,
+            // 'ice-candidate': onIceCandidate,
+            'ws-connection': updateWsOnlineCount,
+            'ws-close': updateWsOnlineCount,
+        })
+
+
+        webRtcChatForm.addEventListener('submit', (event) => {
+
+            event.preventDefault();
+
+            if (webRtcChatInput.value) {
+                return
+            }
+
+            const payload  = {
+                type : 'text-message',
+                data :{
+                    text: webRtcChatInput.value,
+                }
+            }
+
+            sendDataChanelMessage(payload)
+
+            webRtcChatInput.value = '';
+
+        });
 
     </script>
 
@@ -194,6 +189,7 @@
                 align-self: center;
                 gap: 2rem;
             }
+
             video {
                 border-radius:10px;
                 max-width: 400px;
@@ -204,10 +200,89 @@
                 border:2px solid royalblue;
             }
 
-            #messageContainer {
-                margin-top: 20px;
+            #webRtcChat {
+                display: flex;
+                align-items: stretch;
+                height: 300px;
             }
-            #webRtcChatInput {
+
+            #webRtcChatForm {
+                display: flex;
+                flex-direction: column;
+                justify-content: flex-end;
+                align-items: stretch;
+
+                width: 100%;
+                margin: 0;
+                padding: 0;
+            }
+
+            #webRtcChatOnlineUsers {
+                margin: 0;
+                padding: 0;
+                flex: 1;
+                width: 100%;
+                list-style:none;
+                display: flex;
+                flex-wrap: wrap-reverse;
+            }
+
+            #webRtcChatOnlineUsers:before {
+                color: slategray;
+                content: 'connected users :';
+                font-weight: bold;
+            }
+
+            #webRtcChatOnlineUsers:empty {
+                opacity: 0;
+            }
+
+
+            #webRtcChatMessages {
+                margin: 0;
+                padding: 0;
+                display: block;
+                width: 100%;
+                overflow: auto;
+            }
+
+
+            #webRtcChatMessages:empty:before {
+                content: 'chat is empty';
+                width: 100%;
+                height: 100%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: slategray;
+            }
+
+            #webRtcChatMessages:empty:before {
+                content: 'chat is empty';
+                width: 100%;
+                height: 100%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: slategray;
+            }
+
+            #webRtcChatMessages:before{
+                content: 'chat messages';
+            }
+
+            #webRtcChatMessages:empty:before {
+                content: 'chat is empty';
+                width: 100%;
+                height: 100%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: slategray;
+            }
+
+
+            input[type="text"] {
                 height: 1.75rem;
                 padding: .25rem 1rem;
                 border-radius: 5px;
@@ -220,6 +295,15 @@
                 border-radius: 5px;
                 border: 1px solid currentColor;
                 cursor: pointer;
+            }
+
+            fieldset {
+                border: 1px solid currentColor;
+                border-radius: 5px;
+            }
+            legend {
+                font-weight: bold;
+                font-size: 1.5rem;
             }
 
         </style>

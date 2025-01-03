@@ -1,4 +1,3 @@
-// server.js
 const express = require('express');
 const http = require('http');
 const WebSocket = require('ws');
@@ -6,45 +5,66 @@ const WebSocket = require('ws');
 const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
+
 app.use(express.json());
 app.use(express.static('public'));
 
 let offersData = {}
-app.get('/offers', (req, res)=>{
-    res.send(offersData)
+app.get('/offers:userId', ({params}, res)=> {
+
+    const {userId} = params
+
+    res.send(offersData[userId])
 })
 
 app.post('/offers', ({body}, res)=> {
-    const {userId} = body
+    const {userId , offer} = body
 
-    if (!userId) {
+    if (!userId || !offer) {
         res.sendStatus(400)
         return
     }
 
-    offersData[userId] = body
-    res.sendStatus(200)
+    offersData[userId] = offer
+    res.send(offersData)
 })
-wss.on('connection', (ws, { url }) => {
 
-        const params = new URLSearchParams( url )
 
-        const userId = params.get('userId')
+wss.on('connection', (ws , { url , headers}) => {
 
-        console.log('Новый пользователь подключен', userId );
+    const params = new URL(url, `https://${headers.host}`)
 
-    ws._userId = userId
+    ws._userId =  params.searchParams.get('userId')
+
+    const payload = {
+        from:'wss',
+        type:'ws-connection',
+        data : {
+            wsClientsOnline: wss.clients.size,
+            userId: ws._userId,
+        }
+    }
+
+    wss.clients.forEach((client) => {
+        client.send(JSON.stringify(payload));
+    });
+
 
     ws.on('message', (message) => {
-
         const data = JSON.parse(message)
+
         data.from = ws._userId
 
-        console.log(data.type , ws._userId)
+        if (data.to) {
+            
+         const targetWsClient = wss.clients.find((ws)=> {
+            return  ws._userId === data.to
+         })
+            
+         delete data.to
+         targetWsClient.send(JSON.stringify(data))
+         return
 
-        if (data.type === 'offer') {
-            offerData = data
-            return
         }
 
         wss.clients.forEach((client) => {
@@ -52,12 +72,27 @@ wss.on('connection', (ws, { url }) => {
             if (client !== ws && client.readyState === WebSocket.OPEN) {
                 client.send(JSON.stringify(data));
             }
+
         });
     });
 
     ws.on('close', () => {
-        offersData[ws._userId] = undefined
-        console.log('Пользователь отключился', ws._userId );
+
+        delete  offersData[ws._userId]
+
+        const payload = {
+            from:'wss',
+            type:'ws-close',
+            data : {
+                wsClientsOnline: wss.clients.size,
+                userId:ws._userId,
+            }
+        }
+
+        wss.clients.forEach((client) => {
+            client.send(JSON.stringify(payload));
+        });
+
     });
 });
 
