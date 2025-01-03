@@ -10,6 +10,13 @@ app.use(express.json());
 app.use(express.static('public'));
 
 let offersData = {}
+
+
+app.get('/offers', (req, res)=> {
+
+    res.send(offersData)
+})
+
 app.get('/offers:userId', ({params}, res)=> {
 
     const {userId} = params
@@ -36,6 +43,10 @@ wss.on('connection', (ws , { url , headers}) => {
 
     ws._userId =  params.searchParams.get('userId')
 
+    if ( !ws._userId ) {
+        ws.close()
+    }
+
     const payload = {
         from:'wss',
         type:'ws-connection',
@@ -55,17 +66,18 @@ wss.on('connection', (ws , { url , headers}) => {
 
         data.from = ws._userId
 
-        if (data.to) {
-            
-         const targetWsClient = wss.clients.find((ws)=> {
-            return  ws._userId === data.to
-         })
-            
-         delete data.to
-         targetWsClient.send(JSON.stringify(data))
-         return
-
-        }
+        // if (data.to) {
+        //
+        // wss.clients.forEach((item) => {
+        //    if (item._userId === data.to) {
+        //       delete data.to
+        //       ws.send(JSON.stringify(payload));
+        //    }
+        // });
+        //
+        //  return
+        //
+        // }
 
         wss.clients.forEach((client) => {
 

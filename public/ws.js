@@ -1,11 +1,17 @@
-window.socket = new WebSocket(`ws://${window.location.host}?userId=${window.userId}&roomId=123`);
+
+const userId = adapter.browserDetails.browser
+
+
+window.socket = new WebSocket(`ws://${window.location.host}?userId=${userId}&roomId=123`);
 
 const onMessageHandlers = new Map()
 
 socket.onopen = () => {
     console.log('Соединение с сервером установлено');
-    // Отправляем сообщение о новом пользователе
-    socket.send(JSON.stringify({ type: 'new-user', userId }));
+};
+
+socket.onclose = () => {
+    console.log('Соединение с сервером закрыто');
 };
 
 socket.onmessage = (event)=> {

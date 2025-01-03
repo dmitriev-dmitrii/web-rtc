@@ -10,17 +10,20 @@
     <h2>wsOnlineCount : <span id="wsOnlineCount"></span></h2>
     <ol id="statusList"></ol>
 
-    <button id="web-rtc-connect"> web rtc  create offer </button>
+    <button id="createOfferButton"> createOffer </button>
+    <button id="fetchOffersButton"> fetchOffers </button>
 
-    <div id="web-rtc-offers">
-        <h4>web-rtc-offers :</h4>
+    <button id="connectButton"> connectButton </button>
+
+    <div id="offersList">
+
     </div>
 
     <fieldset id="webRtcChat">
 
         <legend>Web-RTC chat</legend>
 
-        <div id="webRtcChatMessages"></div>
+        <li id="webRtcChatMessages"></li>
 
         <form id="webRtcChatForm">
             <ul id="webRtcChatOnlineUsers"></ul>
@@ -39,117 +42,120 @@
 
     
     <script type="module" defer>
-
-        window.userId = adapter.browserDetails.browser
+        const userId = adapter.browserDetails.browser
 
         import {setupOnWsMessageHandlers, sendWsMessage} from "./ws.js";
 
-        import {useWebRtc} from "./web-rtc.js";
+        import { useWebRtc} from "./web-rtc.js";
 
         const statusList = document.getElementById('statusList');
+        
         const wsOnlineCount = document.getElementById('wsOnlineCount');
-        const connectButton = document.getElementById('web-rtc-connect');
-        const webRtcOffers = document.getElementById('web-rtc-offers');
+        const createOfferButton = document.getElementById('createOfferButton');
+        const fetchOffersButton = document.getElementById('fetchOffersButton');
+        const offersList = document.getElementById('offersList');
+        const connectButton = document.getElementById('connectButton');
+
 
         const webRtcChatForm = document.getElementById('webRtcChatForm');
         const webRtcChatInput = document.getElementById('webRtcChatInput');
-        const webRtcChatMessageList = document.getElementById('webRtcChatMessageList');
+        const webRtcChatMessages = document.getElementById('webRtcChatMessages');
 
+
+        const printChatMessage = ( message )=> {
+            const listItem = document.createElement('li')
+            listItem.innerText = message
+            webRtcChatMessages.append(listItem)
+        }
+
+       const  onDataChanelMessage = ( { data , from } )=> {
+
+           const message = `[${from}] : ${data.text}`
+           printChatMessage(message)
+
+       }
+
+      const onDataChanelOpen = (payload)=> {
+          printChatMessage(payload.currentTarget.label + ' chanel is open' )
+      }
+      const onDataChanelClose = (payload)=> {
+          printChatMessage(payload.currentTarget.label + ' chanel is closed' )
+      }
+
+        const {
+            createPeerOffer ,
+            confirmPeerOffer ,
+            setupPeerAnswer  ,
+            sendDataChanelMessage,
+        } = useWebRtc({
+            onDataChanelOpen,
+            onDataChanelClose,
+            onDataChanelMessage
+        })
+
+        createOfferButton.onclick = createPeerOffer
 
         let offers = {}
+        const fetchOffers =  async  () => {
+            const res = await fetch('/offers')
+            offers = await res.json()
+        }
 
-        webRtcOffers.addEventListener('click', async  (e)=> {
+
+        fetchOffersButton.onclick = async ()=> { 
+           await fetchOffers()
+           offersList.innerHTML = ''
+
+           for ( const key of Object.keys(offers)) {
+                if (key !== userId ) {
+                    const offerButton =  document.createElement('button')
+                    offerButton.setAttribute('id', key)
+                    offerButton.innerText = `connect to [${key}] `
+                    offersList.append(offerButton)
+                }
+           }
+        }
+        
+        
+        offersList.addEventListener('click', async  (e)=> {
 
             const currentOffer = offers[e.target.id]
-
-
+            
             if (!currentOffer) {
                 return
             }
 
-            const  answer =   await  confirmPeerOffer(currentOffer)
+            e.target.disabled = true
 
-            const payload = {
-                type:'answer',
-                data: answer,
-                to: e.target.id
-            }
-
-            sendWsMessage(payload)
+           await  confirmPeerOffer({ to: e.target.id ,data:currentOffer })
         })
 
 
         const updateWsOnlineCount = ({data})=> {
+            console.log(data)
             wsOnlineCount.innerText = data.wsClientsOnline
         }
 
-        const printChatMessage = ()=> {
+        connectButton.onclick = async () => {
 
-        }
+            await  createPeerOffer()
+            await fetchOffers()
 
-        connectButton.addEventListener('click', async ()=> {
+            for ( const [ key , value ] of Object.entries(offers)) {
 
-            // const res = await  fetch('/offers')
-            // const data = await res
-
-            // for (const [key, value] of Object.entries(data)) {
-            //     if (key !== userId ) {
-            //       await  onPeerOffer(value)
-            //       await  confirmPeerOffer()
-            //     }
-            // }
-
-            const offer = await createPeerOffer()
-
-            offers  =   await (await fetch('/offers', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json;charset=utf-8'
-                },
-                body: JSON.stringify({offer, userId})
-            })).json();
-
-            for ( const key of Object.keys(offers)) {
                 if (key !== userId ) {
-                   const offerButton =  document.createElement('button')
-                   offerButton.setAttribute('id', key)
-                   offerButton.innerText = `connect to [${key}] `
-                   webRtcOffers.append(offerButton)
+                    await confirmPeerOffer({ to: key ,data:value })
                 }
+
             }
 
-        });
-
-
-       const  onDataChanel = (payload)=> {
-           console.log('onDataChanel payload', payload)
-           printChatMessage('onDataChanel')
         }
-
-        const onDataChanelMessage = ({ data , from , type })=> {
-
-           if (type === 'text-message') {
-               printChatMessage(`[${from}] : [${data.text}]`)
-           }
-
-        }
-
-
-        const {
-            createPeerOffer,
-            confirmPeerOffer,
-            sendDataChanelMessage,
-            onPeerAnswer,
-        } =  useWebRtc({
-
-            onDataChanel,
-            onDataChanelMessage,
-        })
 
 
 
         setupOnWsMessageHandlers({
-            'answer': onPeerAnswer,
+
+            'answer': setupPeerAnswer,
             // 'ice-candidate': onIceCandidate,
             'ws-connection': updateWsOnlineCount,
             'ws-close': updateWsOnlineCount,
@@ -160,7 +166,7 @@
 
             event.preventDefault();
 
-            if (webRtcChatInput.value) {
+            if (!webRtcChatInput.value) {
                 return
             }
 
@@ -171,10 +177,12 @@
                 }
             }
 
+
             sendDataChanelMessage(payload)
 
-            webRtcChatInput.value = '';
+            printChatMessage(`[me] : ${webRtcChatInput.value}`)
 
+            webRtcChatInput.value = '';
         });
 
     </script>
