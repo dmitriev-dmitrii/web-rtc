@@ -11,6 +11,10 @@ const configuration = {
     // ]
 };
 
+const buildPairOfConnectionsName = ( remoteUserId , isHostPeer= false )=> {
+   // пусть имя хоста будет первым - проще для дебагинга  
+  return   isHostPeer ? `[${userId}][${remoteUserId}]` : `[${remoteUserId}][${ userId}]`
+}
 export const useWebRtc = (callbacks)=> {
 
     const {
@@ -19,9 +23,9 @@ export const useWebRtc = (callbacks)=> {
         onDataChanelMessage
     } = callbacks
 
-    const setupDataChanelEvents = (channel , userId)=> {
+    const setupDataChanelEvents = ({ channel , pairName })=> {
 
-        dataChannels[userId] = channel
+        dataChannels[pairName] = channel
 
         channel.onmessage = async (e) =>  {
 
@@ -52,22 +56,23 @@ export const useWebRtc = (callbacks)=> {
 
     const createPeerOffer  = async( { from } ) => {
 
-        peerConnections[ from ] = new RTCPeerConnection(configuration)
+        const pairName =  buildPairOfConnectionsName( from , true )
+        
+        peerConnections[ pairName ] = new RTCPeerConnection(configuration)
 
-        peerConnections[ from ].onicecandidate = (event)=>  {
+        peerConnections[ pairName ].onicecandidate = (event)=>  {
 
             console.log('ice candidate' , event )
 
         }
 
-        const chanelLabel = `[${ userId }][${ from }]`
-        const channel = await peerConnections[ from ].createDataChannel(chanelLabel);
+        const channel = await peerConnections[ pairName ].createDataChannel( pairName );
 
-        setupDataChanelEvents( channel, chanelLabel )
+        setupDataChanelEvents( { pairName, channel }  )
 
 
-        const offer = await  peerConnections[from].createOffer()
-        await peerConnections[from].setLocalDescription(offer)
+        const offer = await  peerConnections[pairName].createOffer()
+        await peerConnections[pairName].setLocalDescription(offer)
 
         const payload = {
             type:'offer',
@@ -79,30 +84,35 @@ export const useWebRtc = (callbacks)=> {
     }
 
      const confirmPeerOffer  = async( { from , data } ) => {
+        const pairName =  buildPairOfConnectionsName( from )
 
-        peerConnections[from] =  new RTCPeerConnection(configuration)
-        peerConnections[from].onicecandidate = (event)=>  {
+        peerConnections[pairName] =  new RTCPeerConnection(configuration)
+
+        peerConnections[pairName].onicecandidate = (event)=>  {
 
             console.log('ice candidate' , event )
 
         }
 
-        peerConnections[from].ondatachannel= (event) => {
-            console.log('ice candidate' , event )
-            setupDataChanelEvents(event.channel , from)
+        peerConnections[pairName].ondatachannel= (event) => {
+            
+            const {channel} = event
+            
+            setupDataChanelEvents({ channel , pairName })
+            
         }
 
-        await peerConnections[from].setRemoteDescription(data)
+        await peerConnections[pairName].setRemoteDescription(data)
 
-        const answer = await peerConnections[from].createAnswer()
-        await peerConnections[from].setLocalDescription(answer)
+        const answer = await peerConnections[pairName].createAnswer()
+        await peerConnections[pairName].setLocalDescription(answer)
 
         setTimeout(()=> {
 
             const payload = {
                 to:from,
                 type:'answer',
-                data: peerConnections[from].localDescription
+                data: peerConnections[pairName].localDescription
             }
 
             sendWsMessage(payload)
@@ -113,7 +123,8 @@ export const useWebRtc = (callbacks)=> {
     }
 
     const setupPeerAnswer = async( { data , from } ) => {
-        await peerConnections[from].setRemoteDescription(data)
+        const pairName = buildPairOfConnectionsName(from,true)
+        await peerConnections[pairName].setRemoteDescription(data)
     }
 
 

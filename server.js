@@ -37,22 +37,22 @@ wss.on('connection', (ws , { url , headers}) => {
 
         data.from = ws._userId
 
-        if (data.to) {
-
-        const targetWsUser  =  [...wss.clients].find((item)=>{ return item._userId === data.to })
-        delete data.to
-        targetWsUser.send(JSON.stringify(payload));
-
-        // wss.clients.forEach((item) => {
-        //    if (item._userId === data.to) {
-        //       delete data.to
-        //       ws.send(JSON.stringify(payload));
-        //    }
-        // });
-
-         return
-
-        }
+        // if (data.to) {
+        //
+        // const targetWsUser  =  [...wss.clients].find((item)=>{ return item._userId === data.to })
+        // delete data.to
+        // targetWsUser.send(JSON.stringify(payload));
+        //
+        // // wss.clients.forEach((item) => {
+        // //    if (item._userId === data.to) {
+        // //       delete data.to
+        // //       ws.send(JSON.stringify(payload));
+        // //    }
+        // // });
+        //
+        //  return
+        //
+        // }
 
         wss.clients.forEach((client) => {
 
