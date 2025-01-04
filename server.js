@@ -9,34 +9,6 @@ const wss = new WebSocket.Server({ server });
 app.use(express.json());
 app.use(express.static('public'));
 
-let offersData = {}
-
-
-app.get('/offers', (req, res)=> {
-
-    res.send(offersData)
-})
-
-app.get('/offers:userId', ({params}, res)=> {
-
-    const {userId} = params
-
-    res.send(offersData[userId])
-})
-
-app.post('/offers', ({body}, res)=> {
-    const {userId , offer} = body
-
-    if (!userId || !offer) {
-        res.sendStatus(400)
-        return
-    }
-
-    offersData[userId] = offer
-    res.send(offersData)
-})
-
-
 wss.on('connection', (ws , { url , headers}) => {
 
     const params = new URL(url, `https://${headers.host}`)
@@ -65,23 +37,22 @@ wss.on('connection', (ws , { url , headers}) => {
 
         data.from = ws._userId
 
-        // if (data.to) {
-        //
-        // const targetWsUser  =  [...wss.clients].find((item)=>{ return item._userId === data.to })
-        // console.log(targetWsUser)
-        // delete data.to
-        // targetWsUser.send(JSON.stringify(payload));
-        //
-        // // wss.clients.forEach((item) => {
-        // //    if (item._userId === data.to) {
-        // //       delete data.to
-        // //       ws.send(JSON.stringify(payload));
-        // //    }
-        // // });
-        //
-        //  return
-        //
-        // }
+        if (data.to) {
+
+        const targetWsUser  =  [...wss.clients].find((item)=>{ return item._userId === data.to })
+        delete data.to
+        targetWsUser.send(JSON.stringify(payload));
+
+        // wss.clients.forEach((item) => {
+        //    if (item._userId === data.to) {
+        //       delete data.to
+        //       ws.send(JSON.stringify(payload));
+        //    }
+        // });
+
+         return
+
+        }
 
         wss.clients.forEach((client) => {
 
@@ -93,8 +64,6 @@ wss.on('connection', (ws , { url , headers}) => {
     });
 
     ws.on('close', () => {
-
-        delete  offersData[ws._userId]
 
         const payload = {
             from:'wss',
