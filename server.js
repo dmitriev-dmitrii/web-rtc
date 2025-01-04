@@ -51,8 +51,7 @@ wss.on('connection', (ws , { url , headers}) => {
         from:'wss',
         type:'ws-connection',
         data : {
-            wsClientsOnline: wss.clients.size,
-            userId: ws._userId,
+            wsClientsOnline: Array.from(wss.clients).map(( {_userId} )=> _userId) ,
         }
     }
 
@@ -68,12 +67,17 @@ wss.on('connection', (ws , { url , headers}) => {
 
         // if (data.to) {
         //
-        // wss.clients.forEach((item) => {
-        //    if (item._userId === data.to) {
-        //       delete data.to
-        //       ws.send(JSON.stringify(payload));
-        //    }
-        // });
+        // const targetWsUser  =  [...wss.clients].find((item)=>{ return item._userId === data.to })
+        // console.log(targetWsUser)
+        // delete data.to
+        // targetWsUser.send(JSON.stringify(payload));
+        //
+        // // wss.clients.forEach((item) => {
+        // //    if (item._userId === data.to) {
+        // //       delete data.to
+        // //       ws.send(JSON.stringify(payload));
+        // //    }
+        // // });
         //
         //  return
         //
@@ -96,8 +100,7 @@ wss.on('connection', (ws , { url , headers}) => {
             from:'wss',
             type:'ws-close',
             data : {
-                wsClientsOnline: wss.clients.size,
-                userId:ws._userId,
+                wsClientsOnline:  Array.from(wss.clients).map(( {_userId} )=> _userId),
             }
         }
 

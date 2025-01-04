@@ -7,17 +7,9 @@
 </head>
 <body>
     <h1 style="text-align: center">Web-RTC</h1>
-    <h2>wsOnlineCount : <span id="wsOnlineCount"></span></h2>
-    <ol id="statusList"></ol>
-
-    <button id="createOfferButton"> createOffer </button>
-    <button id="fetchOffersButton"> fetchOffers </button>
+    <h2>wsOnlineClients : <span id="wsOnlineClientsDom"></span></h2>
 
     <button id="connectButton"> connectButton </button>
-
-    <div id="offersList">
-
-    </div>
 
     <fieldset id="webRtcChat">
 
@@ -26,14 +18,11 @@
         <li id="webRtcChatMessages"></li>
 
         <form id="webRtcChatForm">
-            <ul id="webRtcChatOnlineUsers"></ul>
             <input type="text" id="webRtcChatInput" placeholder="Введите сообщение" required />
             <button type="submit">Отправить</button>
         </form>
 
     </fieldset>
-
-
 
 </div>
 
@@ -48,12 +37,8 @@
 
         import { useWebRtc} from "./web-rtc.js";
 
-        const statusList = document.getElementById('statusList');
         
-        const wsOnlineCount = document.getElementById('wsOnlineCount');
-        const createOfferButton = document.getElementById('createOfferButton');
-        const fetchOffersButton = document.getElementById('fetchOffersButton');
-        const offersList = document.getElementById('offersList');
+        const wsOnlineClientsDom = document.getElementById('wsOnlineClientsDom');
         const connectButton = document.getElementById('connectButton');
 
 
@@ -61,6 +46,7 @@
         const webRtcChatInput = document.getElementById('webRtcChatInput');
         const webRtcChatMessages = document.getElementById('webRtcChatMessages');
 
+        let wsOnlineClients = []
 
         const printChatMessage = ( message )=> {
             const listItem = document.createElement('li')
@@ -93,72 +79,29 @@
             onDataChanelMessage
         })
 
-        createOfferButton.onclick = createPeerOffer
-
-        let offers = {}
-        const fetchOffers =  async  () => {
-            const res = await fetch('/offers')
-            offers = await res.json()
-        }
-
-
-        fetchOffersButton.onclick = async ()=> { 
-           await fetchOffers()
-           offersList.innerHTML = ''
-
-           for ( const key of Object.keys(offers)) {
-                if (key !== userId ) {
-                    const offerButton =  document.createElement('button')
-                    offerButton.setAttribute('id', key)
-                    offerButton.innerText = `connect to [${key}] `
-                    offersList.append(offerButton)
-                }
-           }
-        }
-        
-        
-        offersList.addEventListener('click', async  (e)=> {
-
-            const currentOffer = offers[e.target.id]
-            
-            if (!currentOffer) {
-                return
-            }
-
-            e.target.disabled = true
-
-           await  confirmPeerOffer({ to: e.target.id ,data:currentOffer })
-        })
-
-
-        const updateWsOnlineCount = ({data})=> {
-            console.log(data)
-            wsOnlineCount.innerText = data.wsClientsOnline
+        const updateWsOnlineClients = ({data})=> {
+            wsOnlineClients = data.wsClientsOnline
+            wsOnlineClientsDom.innerText = JSON.stringify(data.wsClientsOnline)
         }
 
         connectButton.onclick = async () => {
 
-            await  createPeerOffer()
-            await fetchOffers()
-
-            for ( const [ key , value ] of Object.entries(offers)) {
-
-                if (key !== userId ) {
-                    await confirmPeerOffer({ to: key ,data:value })
-                }
-
+            const payload = {
+                type: 'join-request'
             }
 
+            sendWsMessage(payload)
         }
 
 
 
         setupOnWsMessageHandlers({
-
+            'join-request' : createPeerOffer,
+            'offer': confirmPeerOffer,
             'answer': setupPeerAnswer,
             // 'ice-candidate': onIceCandidate,
-            'ws-connection': updateWsOnlineCount,
-            'ws-close': updateWsOnlineCount,
+            'ws-connection': updateWsOnlineClients,
+            'ws-close': updateWsOnlineClients,
         })
 
 
@@ -192,22 +135,6 @@
                 box-sizing: border-box;
             }
 
-            .videoStreamsElement {
-                display: flex;
-                align-self: center;
-                gap: 2rem;
-            }
-
-            video {
-                border-radius:10px;
-                max-width: 400px;
-                max-height: 300px;
-            }
-
-            #localVideo {
-                border:2px solid royalblue;
-            }
-
             #webRtcChat {
                 display: flex;
                 align-items: stretch;
@@ -224,27 +151,6 @@
                 margin: 0;
                 padding: 0;
             }
-
-            #webRtcChatOnlineUsers {
-                margin: 0;
-                padding: 0;
-                flex: 1;
-                width: 100%;
-                list-style:none;
-                display: flex;
-                flex-wrap: wrap-reverse;
-            }
-
-            #webRtcChatOnlineUsers:before {
-                color: slategray;
-                content: 'connected users :';
-                font-weight: bold;
-            }
-
-            #webRtcChatOnlineUsers:empty {
-                opacity: 0;
-            }
-
 
             #webRtcChatMessages {
                 margin: 0;
