@@ -6,191 +6,129 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/webrtc-adapter/8.2.0/adapter.js"></script>
 </head>
 <body>
-    <h1>Web-RTC</h1>
-    <ol id="statusList"></ol>
-    <div id="videoStreamsElement">
-        <video id="localVideo" autoplay muted></video>
-        <video id="remoteVideo" autoplay muted></video>
-    </div>
-    <button id="startCall">createOffer</button>
+    <h1 style="text-align: center">Web-RTC</h1>
+    <h2>wsOnlineClients : <span id="wsOnlineClientsDom"></span></h2>
 
+    <button id="connectButton"> connectButton </button>
 
+    <fieldset id="webRtcChat">
+
+        <legend>Web-RTC chat</legend>
+
+        <li id="webRtcChatMessages"></li>
 
         <form id="webRtcChatForm">
-            <h2>Web-RTC chat</h2>
-            <ul id="webRtcChatMessageList"></ul>
             <input type="text" id="webRtcChatInput" placeholder="Введите сообщение" required />
             <button type="submit">Отправить</button>
         </form>
 
+    </fieldset>
+
+</div>
+
+
     </div>
 
+    
     <script type="module" defer>
-        const socket = new WebSocket(`ws://${window.location.host}`);
+        const userId = adapter.browserDetails.browser
 
-        const statusList = document.getElementById('statusList');
+        import {setupOnWsMessageHandlers, sendWsMessage} from "./ws.js";
 
-        const localVideo = document.getElementById('localVideo');
-        const remoteVideo = document.getElementById('remoteVideo');
+        import { useWebRtc} from "./web-rtc.js";
 
-        const startCallButton = document.getElementById('startCall');
+        
+        const wsOnlineClientsDom = document.getElementById('wsOnlineClientsDom');
+        const connectButton = document.getElementById('connectButton');
+
 
         const webRtcChatForm = document.getElementById('webRtcChatForm');
         const webRtcChatInput = document.getElementById('webRtcChatInput');
-        const webRtcChatMessageList = document.getElementById('webRtcChatMessageList');
+        const webRtcChatMessages = document.getElementById('webRtcChatMessages');
 
-        const userId = adapter.browserDetails.browser
+        let wsOnlineClients = []
 
-
-
-        const configuration = {
-            iceServers: [
-                { urls: 'stun:stun.l.google.com:19302' }
-            ]
-        };
-
-        const peerConnection = new RTCPeerConnection(configuration);
-
-        const localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        localVideo.srcObject = localStream;
-        localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
-
-
-        const printPeerConnectionState = ()=> {
-            const li = document.createElement('li')
-            li.innerText = peerConnection.connectionState
-
-            statusList.append(li)
+        const printChatMessage = ( message )=> {
+            const listItem = document.createElement('li')
+            listItem.innerText = message
+            webRtcChatMessages.append(listItem)
         }
 
-        function printChatMessage(message) {
-            const messageElement = document.createElement('li');
-            messageElement.textContent = message;
-            webRtcChatMessageList.appendChild(messageElement);
+       const  onDataChanelMessage = ( { data , from } )=> {
+
+           const message = `[${from}] : ${data.text}`
+           printChatMessage(message)
+
+       }
+
+      const onDataChanelOpen = (payload)=> {
+          printChatMessage(payload.currentTarget.label + ' chanel is open' )
+      }
+      const onDataChanelClose = (payload)=> {
+          printChatMessage(payload.currentTarget.label + ' chanel is closed' )
+      }
+
+        const {
+            createPeerOffer ,
+            confirmPeerOffer ,
+            setupPeerAnswer  ,
+            updatePeerIceCandidate,
+            sendDataChanelMessage,
+        } = useWebRtc({
+            onDataChanelOpen,
+            onDataChanelClose,
+            onDataChanelMessage
+        })
+
+        const updateWsOnlineClients = ({data})=> {
+            wsOnlineClients = data.wsClientsOnline
+            wsOnlineClientsDom.innerText = JSON.stringify(data.wsClientsOnline)
         }
 
-        const setupChanelEvents =  (channel)=> {
+        connectButton.onclick = async () => {
 
-            channel.onmessage = (event) => {
-                console.log('event',event)
-                printChatMessage(  event.data );
-            };
-
-            webRtcChatForm.addEventListener('submit', (event) => {
-                event.preventDefault();
-                const message = `${userId}: ${webRtcChatInput.value}` ;
-                channel.send(message); // Отправка сообщения через DataChannel
-                printChatMessage(message); // Отображение отправленного сообщения
-                webRtcChatInput.value = ''; // Очистка поля ввода
-            });
-
-        }
-
-        peerConnection.ondatachannel = (event) => {
-            setupChanelEvents(event.channel)
-        };
-
-        peerConnection.ontrack = (event) => {
-            remoteVideo.srcObject = event.streams[0];
-        };
-
-        peerConnection.onicecandidate = (event) => {
-            console.log('onicecandidate')
-
-            if (event.candidate) {
-                socket.send(JSON.stringify({ type: 'ice-candidate', candidate: event.candidate }));
+            const payload = {
+                type: 'join-request'
             }
 
-        };
-
-        peerConnection.onconnectionstatechange = (e)=>{
-            printPeerConnectionState()
+            sendWsMessage(payload)
         }
 
-        // peerConnection.onicecandidateerror = ()=>{
-        //     console.log(' onicecandidateerror ')
-        // }
-        //
-        // peerConnection.oniceconnectionstatechange = ()=>{
-        //     console.log(' oniceconnectionstatechange ')
-        // }
-        //
-        // peerConnection.onicegatheringstatechange = ()=>{
-        //     console.log(' onicegatheringstatechange ')
-        // }
-        //
-        // peerConnection.onnegotiationneeded = ()=>{
-        //     console.log('onnegotiationneeded  ')
-        // }
-        //
-        // peerConnection.onsignalingstatechange = ()=>{
-        //
-        //     console.log(' onsignalingstatechange ', peerConnection.signalingState )
-        // }
-        //
 
 
+        setupOnWsMessageHandlers({
+            'join-request' : createPeerOffer,
+            'offer': confirmPeerOffer,
+            'answer': setupPeerAnswer,
+            'ice-candidate': updatePeerIceCandidate,
 
-        async function createPeerOffer() {
+            'ws-connection': updateWsOnlineClients,
+            'ws-close': updateWsOnlineClients,
+        })
 
-            const offer = await peerConnection.createOffer();
-            await peerConnection.setLocalDescription(offer);
-            socket.send(JSON.stringify({ type: 'offer', offer }));
-        }
 
-        const onIceCandidate = async (message)=> {
-            await peerConnection.addIceCandidate(new RTCIceCandidate(message.candidate));
-        }
+        webRtcChatForm.addEventListener('submit', (event) => {
 
-        const  onPeerOffer = async (message)=> {
+            event.preventDefault();
 
-            await peerConnection.setRemoteDescription(new RTCSessionDescription(message.offer));
-
-        }
-        const createPeerAnswer = async ()=>{
-            const answer = await peerConnection.createAnswer();
-            await peerConnection.setLocalDescription(answer);
-            socket.send(JSON.stringify({ type: 'answer', answer }));
-        }
-        const onPeerAnswer = async (message)=>{
-            await peerConnection.setRemoteDescription(new RTCSessionDescription(message.answer));
-        }
-
-        socket.onmessage = async (event) => {
-            try {
-                const message = JSON.parse(event.data);
-
-                if (message.type === 'offer') {
-                 await  onPeerOffer(message)
-                 await  createPeerAnswer()
-                    return
-                }
-                if (message.type === 'answer') {
-                   await onPeerAnswer(message)
-                    return
-                }
-
-                if (message.type === 'ice-candidate') {
-                    await onIceCandidate(message)
-                }
-            } catch (error) {
-                console.error('Ошибка при обработке сообщения:', error);
+            if (!webRtcChatInput.value) {
+                return
             }
-        };
+
+            const payload  = {
+                type : 'text-message',
+                data :{
+                    text: webRtcChatInput.value,
+                }
+            }
 
 
+            sendDataChanelMessage(payload)
 
-        startCallButton.addEventListener('click', async ()=> {
+            printChatMessage(`[me] : ${webRtcChatInput.value}`)
 
-            printPeerConnectionState()
-            const  channel = peerConnection.createDataChannel(`${userId}-chat` );
-            setupChanelEvents(channel)
-
-            await createPeerOffer()
-
+            webRtcChatInput.value = '';
         });
-
-
 
     </script>
 
@@ -199,25 +137,68 @@
                 box-sizing: border-box;
             }
 
-            .videoStreamsElement {
+            #webRtcChat {
                 display: flex;
-                align-self: center;
-                gap: 2rem;
-            }
-            video {
-                border-radius:10px;
-                max-width: 400px;
-                max-height: 300px;
+                align-items: stretch;
+                height: 300px;
             }
 
-            #localVideo {
-                border:2px solid royalblue;
+            #webRtcChatForm {
+                display: flex;
+                flex-direction: column;
+                justify-content: flex-end;
+                align-items: stretch;
+
+                width: 100%;
+                margin: 0;
+                padding: 0;
             }
 
-            #messageContainer {
-                margin-top: 20px;
+            #webRtcChatMessages {
+                margin: 0;
+                padding: 0;
+                display: block;
+                width: 100%;
+                overflow: auto;
             }
-            #webRtcChatInput {
+
+
+            #webRtcChatMessages:empty:before {
+                content: 'chat is empty';
+                width: 100%;
+                height: 100%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: slategray;
+            }
+
+            #webRtcChatMessages:empty:before {
+                content: 'chat is empty';
+                width: 100%;
+                height: 100%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: slategray;
+            }
+
+            #webRtcChatMessages:before{
+                content: 'chat messages';
+            }
+
+            #webRtcChatMessages:empty:before {
+                content: 'chat is empty';
+                width: 100%;
+                height: 100%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: slategray;
+            }
+
+
+            input[type="text"] {
                 height: 1.75rem;
                 padding: .25rem 1rem;
                 border-radius: 5px;
@@ -230,6 +211,15 @@
                 border-radius: 5px;
                 border: 1px solid currentColor;
                 cursor: pointer;
+            }
+
+            fieldset {
+                border: 1px solid currentColor;
+                border-radius: 5px;
+            }
+            legend {
+                font-weight: bold;
+                font-size: 1.5rem;
             }
 
         </style>
