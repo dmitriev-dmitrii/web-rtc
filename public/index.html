@@ -72,6 +72,7 @@
             createPeerOffer ,
             confirmPeerOffer ,
             setupPeerAnswer  ,
+            updatePeerIceCandidate,
             sendDataChanelMessage,
         } = useWebRtc({
             onDataChanelOpen,
@@ -99,7 +100,8 @@
             'join-request' : createPeerOffer,
             'offer': confirmPeerOffer,
             'answer': setupPeerAnswer,
-            // 'ice-candidate': onIceCandidate,
+            'ice-candidate': updatePeerIceCandidate,
+
             'ws-connection': updateWsOnlineClients,
             'ws-close': updateWsOnlineClients,
         })

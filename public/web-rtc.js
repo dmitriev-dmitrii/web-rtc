@@ -54,17 +54,33 @@ export const useWebRtc = (callbacks)=> {
 
     }
 
+    function onIceCandidate(event) {
+
+        if (!event.candidate) {
+            return
+        }
+
+        const payload = {
+            to: this.remoteUserId,
+            type:'ice-candidate',
+            data:{
+                pairName : this.pairName,
+                candidate : event.candidate
+            }
+        }
+
+        sendWsMessage(payload)
+    }
+
+
+
     const createPeerOffer  = async( { from } ) => {
 
         const pairName =  buildPairOfConnectionsName( from , true )
         
         peerConnections[ pairName ] = new RTCPeerConnection(configuration)
 
-        peerConnections[ pairName ].onicecandidate = (event)=>  {
-
-            console.log('ice candidate' , event )
-
-        }
+        peerConnections[pairName].onicecandidate = onIceCandidate.bind( { remoteUserId : from , pairName } );
 
         const channel = await peerConnections[ pairName ].createDataChannel( pairName );
 
@@ -88,11 +104,7 @@ export const useWebRtc = (callbacks)=> {
 
         peerConnections[pairName] =  new RTCPeerConnection(configuration)
 
-        peerConnections[pairName].onicecandidate = (event)=>  {
-
-            console.log('ice candidate' , event )
-
-        }
+        peerConnections[pairName].onicecandidate = onIceCandidate.bind({ remoteUserId : from , pairName });
 
         peerConnections[pairName].ondatachannel= (event) => {
             
@@ -107,19 +119,13 @@ export const useWebRtc = (callbacks)=> {
         const answer = await peerConnections[pairName].createAnswer()
         await peerConnections[pairName].setLocalDescription(answer)
 
-        setTimeout(()=> {
-
-            const payload = {
+         const payload = {
                 to:from,
                 type:'answer',
-                data: peerConnections[pairName].localDescription
-            }
+                data: answer
+         }
 
-            sendWsMessage(payload)
-
-        }, 3000)
-
-
+         sendWsMessage(payload)
     }
 
     const setupPeerAnswer = async( { data , from } ) => {
@@ -127,6 +133,11 @@ export const useWebRtc = (callbacks)=> {
         await peerConnections[pairName].setRemoteDescription(data)
     }
 
+    const updatePeerIceCandidate = async ({ data } )=> {
+
+        await peerConnections[data.pairName].addIceCandidate(new RTCIceCandidate( data.candidate ));
+
+    }
 
     const sendDataChanelMessage = (payload)=> {
 
@@ -141,6 +152,7 @@ export const useWebRtc = (callbacks)=> {
     }
 
     return {
+        updatePeerIceCandidate,
         sendDataChanelMessage,
         createPeerOffer,
         confirmPeerOffer,
