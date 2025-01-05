@@ -32,34 +32,27 @@ wss.on('connection', (ws , { url , headers}) => {
     });
 
 
-    ws.on('message', (message) => {
-        const data = JSON.parse(message)
+    ws.on('message', (payload) => {
 
-        data.from = ws._userId
+        let data = JSON.parse(payload);
+        data.from = ws._userId;
 
-        // if (data.to) {
-        //
-        // const targetWsUser  =  [...wss.clients].find((item)=>{ return item._userId === data.to })
-        // delete data.to
-        // targetWsUser.send(JSON.stringify(payload));
-        //
-        // // wss.clients.forEach((item) => {
-        // //    if (item._userId === data.to) {
-        // //       delete data.to
-        // //       ws.send(JSON.stringify(payload));
-        // //    }
-        // // });
-        //
-        //  return
-        //
-        // }
+        if (data.to) {
+            const targetWsUser = [...wss.clients].find((item) => item._userId === data.to);
+            delete data.to;
+
+            if (targetWsUser && targetWsUser.readyState === WebSocket.OPEN) {
+                targetWsUser.send(JSON.stringify(data));
+            }
+            return;
+        }
+
+        data = JSON.stringify(data)
 
         wss.clients.forEach((client) => {
-
             if (client !== ws && client.readyState === WebSocket.OPEN) {
-                client.send(JSON.stringify(data));
+                client.send(data);
             }
-
         });
     });
 
