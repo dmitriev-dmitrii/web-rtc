@@ -50,7 +50,7 @@ export const useWebRtcConnections = ()=> {
         const pairName =  buildConnectionsName( from , true )
 
         if (peerConnections[pairName] || peerConnections[ buildConnectionsName( from ) ]) {
-
+            console.error('this pairName already eat :' , pairName)
             return
         }
 
