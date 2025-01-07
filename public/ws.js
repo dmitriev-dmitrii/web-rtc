@@ -32,13 +32,14 @@ export const sendWsMessage = (payload)=> {
 
 export const setupOnWsMessageHandlers  =  (payload = { })=> {
 
-    Object.entries(payload).forEach(([key,value])=> {
+    Object.entries(payload).forEach(([key,...value])=> {
 
         if ( !onMessageHandlers.has(key)) {
             onMessageHandlers.set( key, [  ]  )
         }
 
-        onMessageHandlers.get( key ).push(value)
+
+        onMessageHandlers.set( key, [...onMessageHandlers.get( key ),...value.flat()]  )
     })
 
 }

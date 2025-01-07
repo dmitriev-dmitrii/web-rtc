@@ -23,7 +23,7 @@ wss.on('connection', (ws , { url , headers}) => {
         from:'wss',
         type:'ws-connection',
         data : {
-            wsClientsOnline: Array.from(wss.clients).map(( {_userId} )=> _userId) ,
+            wsClientsOnline: Array.from(wss.clients).map(( {_userId} )=> _userId).sort() ,
         }
     }
 

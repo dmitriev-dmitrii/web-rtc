@@ -38,7 +38,7 @@ export const useWebRtc = (callbacks)=> {
         }
 
         channel.onopen = async (e)=> {
-
+            console.log('channel.onopen', e)
             if ( onDataChanelOpen ) {
                 await  onDataChanelOpen( e )
             }

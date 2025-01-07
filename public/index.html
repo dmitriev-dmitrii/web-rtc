@@ -62,10 +62,10 @@
        }
 
       const onDataChanelOpen = (payload)=> {
-          printChatMessage(payload.currentTarget.label + ' chanel is open' )
+          printChatMessage(payload.currentTarget.label + ' data chanel is open' )
       }
       const onDataChanelClose = (payload)=> {
-          printChatMessage(payload.currentTarget.label + ' chanel is closed' )
+          printChatMessage(payload.currentTarget.label + ' data chanel is closed' )
       }
 
         const {
@@ -95,9 +95,13 @@
         }
 
 
+        const printJoinRequest = (e)=>{
+            console.log(e)
+            printChatMessage(e.from + ' start web rtc connecting...' )
+        }
 
         setupOnWsMessageHandlers({
-            'join-request' : createPeerOffer,
+            'join-request' : [createPeerOffer , printJoinRequest ],
             'offer': confirmPeerOffer,
             'answer': setupPeerAnswer,
             'ice-candidate': updatePeerIceCandidate,
