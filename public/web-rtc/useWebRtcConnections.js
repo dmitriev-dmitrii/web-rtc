@@ -1,9 +1,7 @@
-import {sendWsMessage} from "./ws.js";
+import {sendWsMessage} from "../ws.js";
 
-const userId = adapter.browserDetails.browser
-
-const peerConnections = {};
-const dataChannels = {}
+import {peerConnections , dataChannels , userId , buildConnectionsName } from "./useWebRtcStore.js";
+import {WEB_SOCKET_EVENTS} from "../constants.js";
 
 const configuration = {
     // iceServers: [
@@ -11,10 +9,8 @@ const configuration = {
     // ]
 };
 
-const buildPairOfConnectionsName = ( remoteUserId , isHostPeer= false )=> {
-   // пусть имя хоста будет первым - проще для дебагинга  
-  return   isHostPeer ? `[${userId}][${remoteUserId}]` : `[${remoteUserId}][${ userId}]`
-}
+
+
 export const useWebRtc = (callbacks)=> {
 
     const {
@@ -62,7 +58,7 @@ export const useWebRtc = (callbacks)=> {
 
         const payload = {
             to: this.remoteUserId,
-            type:'ice-candidate',
+            type: WEB_SOCKET_EVENTS.RTC_ICE_CANDIDATE,
             data:{
                 pairName : this.pairName,
                 candidate : event.candidate
@@ -76,7 +72,7 @@ export const useWebRtc = (callbacks)=> {
 
     const createPeerOffer  = async( { from } ) => {
 
-        const pairName =  buildPairOfConnectionsName( from , true )
+        const pairName =  buildConnectionsName( from , true )
         
         peerConnections[ pairName ] = new RTCPeerConnection(configuration)
 
@@ -91,7 +87,7 @@ export const useWebRtc = (callbacks)=> {
         await peerConnections[pairName].setLocalDescription(offer)
 
         const payload = {
-            type:'offer',
+            type:WEB_SOCKET_EVENTS.RTC_OFFER,
             to: from,
             data: offer
         }
@@ -100,7 +96,7 @@ export const useWebRtc = (callbacks)=> {
     }
 
      const confirmPeerOffer  = async( { from , data } ) => {
-        const pairName =  buildPairOfConnectionsName( from )
+        const pairName =  buildConnectionsName( from )
 
         peerConnections[pairName] =  new RTCPeerConnection(configuration)
 
@@ -121,7 +117,7 @@ export const useWebRtc = (callbacks)=> {
 
          const payload = {
                 to:from,
-                type:'answer',
+                type:WEB_SOCKET_EVENTS.RTC_ANSWER,
                 data: answer
          }
 
@@ -129,7 +125,7 @@ export const useWebRtc = (callbacks)=> {
     }
 
     const setupPeerAnswer = async( { data , from } ) => {
-        const pairName = buildPairOfConnectionsName(from,true)
+        const pairName = buildConnectionsName(from,true)
         await peerConnections[pairName].setRemoteDescription(data)
     }
 

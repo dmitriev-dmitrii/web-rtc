@@ -1,5 +1,4 @@
-
-const userId = adapter.browserDetails.browser
+import {userId } from "./web-rtc/useWebRtcStore.js";
 
 
 window.socket = new WebSocket(`ws://${window.location.host}?userId=${userId}&roomId=123`);

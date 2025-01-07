@@ -31,11 +31,13 @@
 
     
     <script type="module" defer>
+        import {WEB_SOCKET_EVENTS} from "./constants.js";
+
         const userId = adapter.browserDetails.browser
 
         import {setupOnWsMessageHandlers, sendWsMessage} from "./ws.js";
 
-        import { useWebRtc} from "./web-rtc.js";
+        import { useWebRtc} from "./web-rtc/useWebRtcConnections.js";
 
         
         const wsOnlineClientsDom = document.getElementById('wsOnlineClientsDom');
@@ -88,26 +90,21 @@
         connectButton.onclick = async () => {
 
             const payload = {
-                type: 'join-request'
+                type: WEB_SOCKET_EVENTS.RTC_SEND_ME_OFFER
             }
 
             sendWsMessage(payload)
         }
 
 
-        const printJoinRequest = (e)=>{
-            console.log(e)
-            printChatMessage(e.from + ' start web rtc connecting...' )
-        }
-
         setupOnWsMessageHandlers({
-            'join-request' : [createPeerOffer , printJoinRequest ],
-            'offer': confirmPeerOffer,
-            'answer': setupPeerAnswer,
-            'ice-candidate': updatePeerIceCandidate,
+            [WEB_SOCKET_EVENTS.RTC_SEND_ME_OFFER]: [createPeerOffer],
+            [WEB_SOCKET_EVENTS.RTC_OFFER]: confirmPeerOffer,
+            [WEB_SOCKET_EVENTS.RTC_ANSWER]: setupPeerAnswer,
+            [WEB_SOCKET_EVENTS.RTC_ICE_CANDIDATE]: updatePeerIceCandidate,
 
-            'ws-connection': updateWsOnlineClients,
-            'ws-close': updateWsOnlineClients,
+            [WEB_SOCKET_EVENTS.WS_CONNECTION]: updateWsOnlineClients,
+            [WEB_SOCKET_EVENTS.WS_CLOSE]: updateWsOnlineClients,
         })
 
 
