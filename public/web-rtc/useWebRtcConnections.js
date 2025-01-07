@@ -1,6 +1,7 @@
 import {sendWsMessage} from "../ws.js";
 
 import {peerConnections , dataChannels , userId , buildConnectionsName } from "./useWebRtcStore.js";
+import {useWebRtcDataChannels} from "./useWebRtcDataChannels.js";
 import {WEB_SOCKET_EVENTS} from "../constants.js";
 
 const configuration = {
@@ -10,46 +11,9 @@ const configuration = {
 };
 
 
+export const useWebRtcConnections = ()=> {
 
-export const useWebRtc = (callbacks)=> {
-
-    const {
-        onDataChanelOpen,
-        onDataChanelClose,
-        onDataChanelMessage
-    } = callbacks
-
-    const setupDataChanelEvents = ({ channel , pairName })=> {
-
-        dataChannels[pairName] = channel
-
-        channel.onmessage = async (e) =>  {
-
-            const data = JSON.parse(e.data)
-
-            if ( onDataChanelMessage ) {
-              await  onDataChanelMessage( data )
-            }
-
-        }
-
-        channel.onopen = async (e)=> {
-            console.log('channel.onopen', e)
-            if ( onDataChanelOpen ) {
-                await  onDataChanelOpen( e )
-            }
-
-        }
-
-        channel.onclose = async (e) => {
-
-            if ( onDataChanelClose ) {
-              await  onDataChanelClose ( e )
-            }
-        };
-
-    }
-
+    const {setupDataChanelEvents} = useWebRtcDataChannels()
     function onIceCandidate(event) {
 
         if (!event.candidate) {
@@ -69,8 +33,20 @@ export const useWebRtc = (callbacks)=> {
     }
 
 
+    const sendMeOffer = ()=> {
+        const payload = {
+            type: WEB_SOCKET_EVENTS.RTC_SEND_ME_OFFER,
+            data:{
+
+            }
+        }
+
+        sendWsMessage(payload)
+    }
+
 
     const createPeerOffer  = async( { from } ) => {
+
 
         const pairName =  buildConnectionsName( from , true )
         
@@ -135,21 +111,11 @@ export const useWebRtc = (callbacks)=> {
 
     }
 
-    const sendDataChanelMessage = (payload)=> {
 
-        const data = JSON.stringify({...payload, from : userId })
-
-        Object.values(dataChannels).forEach((item)=> {
-            if ( item.readyState === 'open' ) {
-                item.send(data)
-            }
-        })
-
-    }
 
     return {
+        sendMeOffer,
         updatePeerIceCandidate,
-        sendDataChanelMessage,
         createPeerOffer,
         confirmPeerOffer,
         setupPeerAnswer

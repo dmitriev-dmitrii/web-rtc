@@ -31,15 +31,17 @@
 
     
     <script type="module" defer>
-        import {WEB_SOCKET_EVENTS} from "./constants.js";
+        import {WEB_SOCKET_EVENTS,DATA_CHANNELS_EVENTS} from "./constants.js";
 
         const userId = adapter.browserDetails.browser
 
         import {setupOnWsMessageHandlers, sendWsMessage} from "./ws.js";
 
-        import { useWebRtc} from "./web-rtc/useWebRtcConnections.js";
+        import { useWebRtcConnections } from "./web-rtc/useWebRtcConnections.js";
+        import { useWebRtcDataChannels } from "./web-rtc/useWebRtcDataChannels.js";
 
-        
+
+
         const wsOnlineClientsDom = document.getElementById('wsOnlineClientsDom');
         const connectButton = document.getElementById('connectButton');
 
@@ -48,7 +50,16 @@
         const webRtcChatInput = document.getElementById('webRtcChatInput');
         const webRtcChatMessages = document.getElementById('webRtcChatMessages');
 
-        let wsOnlineClients = []
+        const {
+            sendMeOffer,
+            createPeerOffer ,
+            confirmPeerOffer ,
+            setupPeerAnswer  ,
+            updatePeerIceCandidate,
+        } = useWebRtcConnections()
+
+
+        const { sendDataChanelMessage , setupCallbacks }  =   useWebRtcDataChannels()
 
         const printChatMessage = ( message )=> {
             const listItem = document.createElement('li')
@@ -56,46 +67,30 @@
             webRtcChatMessages.append(listItem)
         }
 
-       const  onDataChanelMessage = ( { data , from } )=> {
+        const  onDataChanelMessage = ( { data , type , from } )=> {
 
-           const message = `[${from}] : ${data.text}`
-           printChatMessage(message)
-
-       }
-
-      const onDataChanelOpen = (payload)=> {
-          printChatMessage(payload.currentTarget.label + ' data chanel is open' )
-      }
-      const onDataChanelClose = (payload)=> {
-          printChatMessage(payload.currentTarget.label + ' data chanel is closed' )
-      }
-
-        const {
-            createPeerOffer ,
-            confirmPeerOffer ,
-            setupPeerAnswer  ,
-            updatePeerIceCandidate,
-            sendDataChanelMessage,
-        } = useWebRtc({
-            onDataChanelOpen,
-            onDataChanelClose,
-            onDataChanelMessage
-        })
-
-        const updateWsOnlineClients = ({data})=> {
-            wsOnlineClients = data.wsClientsOnline
-            wsOnlineClientsDom.innerText = JSON.stringify(data.wsClientsOnline)
-        }
-
-        connectButton.onclick = async () => {
-
-            const payload = {
-                type: WEB_SOCKET_EVENTS.RTC_SEND_ME_OFFER
+            if (type === 'text') {
+                const message = `[${from}] : ${data.text}`
+                printChatMessage(message)
             }
 
-            sendWsMessage(payload)
+        }
+        const onDataChanelOpen = (e)=>{
+            console.log(e)
+
+            printChatMessage( e.label + ' channel is open')
         }
 
+        const onDataChanelClose = (e)=>{
+            console.log(e)
+            printChatMessage(e.label + ' channel is closed')
+        }
+
+
+        const updateWsOnlineClients = ({data})=> {
+
+            wsOnlineClientsDom.innerText = JSON.stringify(data.wsClientsOnline)
+        }
 
         setupOnWsMessageHandlers({
             [WEB_SOCKET_EVENTS.RTC_SEND_ME_OFFER]: [createPeerOffer],
@@ -107,6 +102,16 @@
             [WEB_SOCKET_EVENTS.WS_CLOSE]: updateWsOnlineClients,
         })
 
+
+,
+        setupCallbacks({
+            [DATA_CHANNELS_EVENTS.DATA_CHANEL_ON_OPEN]:onDataChanelOpen,
+            [DATA_CHANNELS_EVENTS.DATA_CHANEL_ON_CLOSE]:  onDataChanelClose,
+            [DATA_CHANNELS_EVENTS.DATA_CHANEL_ON_MESSAGE]: onDataChanelMessage,
+        })
+
+
+        connectButton.onclick = sendMeOffer
 
         webRtcChatForm.addEventListener('submit', (event) => {
 
@@ -123,13 +128,14 @@
                 }
             }
 
-
             sendDataChanelMessage(payload)
 
             printChatMessage(`[me] : ${webRtcChatInput.value}`)
 
             webRtcChatInput.value = '';
         });
+
+
 
     </script>
 

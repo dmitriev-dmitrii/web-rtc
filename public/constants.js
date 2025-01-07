@@ -1,3 +1,4 @@
+
 export const WEB_SOCKET_EVENTS  = {
     'WS_CONNECTION' : 'ws-connection',
     'WS_CLOSE' : 'ws-close',
@@ -9,3 +10,9 @@ export const WEB_SOCKET_EVENTS  = {
 
 }
 
+export const  DATA_CHANNELS_EVENTS = {
+    'DATA_CHANEL_ON_OPEN' : 'onopen',
+    'DATA_CHANEL_ON_CLOSE' : 'onclose',
+    'DATA_CHANEL_ON_MESSAGE' : 'onmessage',
+
+}

@@ -13,12 +13,12 @@ socket.onclose = () => {
     console.log('Соединение с сервером закрыто');
 };
 
-socket.onmessage = (event)=> {
+socket.onmessage = async (event)=> {
     const payload = JSON.parse(event.data);
     const {type} = payload
 
     if (onMessageHandlers.get(type)) {
-        onMessageHandlers.get(type).forEach((cb)=>{
+        onMessageHandlers.get(type).forEach((cb)=> {
             cb(payload)
         })
     }
