@@ -11,6 +11,7 @@ socket.onopen = () => {
 
 socket.onclose = () => {
     console.log('Соединение с сервером закрыто');
+    wsOnlineClientsDom.innerText = JSON.stringify( [])
 };
 
 socket.onmessage = async (event)=> {
