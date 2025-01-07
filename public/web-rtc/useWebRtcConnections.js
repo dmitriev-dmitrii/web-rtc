@@ -1,6 +1,6 @@
 import {sendWsMessage} from "../ws.js";
 
-import {peerConnections , dataChannels , userId , buildConnectionsName } from "./useWebRtcStore.js";
+import { peerConnections , buildConnectionsName } from "./useWebRtcStore.js";
 import {useWebRtcDataChannels} from "./useWebRtcDataChannels.js";
 import {WEB_SOCKET_EVENTS} from "../constants.js";
 
@@ -47,9 +47,13 @@ export const useWebRtcConnections = ()=> {
 
     const createPeerOffer  = async( { from } ) => {
 
-
         const pairName =  buildConnectionsName( from , true )
-        
+
+        if (peerConnections[pairName] || peerConnections[ buildConnectionsName( from ) ]) {
+
+            return
+        }
+
         peerConnections[ pairName ] = new RTCPeerConnection(configuration)
 
         peerConnections[pairName].onicecandidate = onIceCandidate.bind( { remoteUserId : from , pairName } );

@@ -49,8 +49,7 @@ export const useWebRtcDataChannels = ( )=> {
         };
 
     }
-    
-    
+
     const sendDataChanelMessage = (payload)=> {
 
         const data = JSON.stringify({...payload, from : userId })
@@ -60,7 +59,6 @@ export const useWebRtcDataChannels = ( )=> {
                 item.send(data)
             }
         })
-        
 
     }
     
