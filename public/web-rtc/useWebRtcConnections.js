@@ -68,7 +68,7 @@ export const useWebRtcConnections = () => {
         const payload = {
             type: WEB_SOCKET_EVENTS.RTC_OFFER,
             to: from,
-            data: offer
+            data: {offer}
         }
 
         sendWsMessage(payload)
@@ -89,7 +89,7 @@ export const useWebRtcConnections = () => {
 
         }
 
-        await peerConnections[pairName].setRemoteDescription(data)
+        await peerConnections[pairName].setRemoteDescription(data.offer)
 
         const answer = await peerConnections[pairName].createAnswer()
         await peerConnections[pairName].setLocalDescription(answer)
@@ -97,7 +97,7 @@ export const useWebRtcConnections = () => {
         const payload = {
             to: from,
             type: WEB_SOCKET_EVENTS.RTC_ANSWER,
-            data: answer
+            data: {answer}
         }
 
         sendWsMessage(payload)
@@ -105,7 +105,7 @@ export const useWebRtcConnections = () => {
 
     const setupPeerAnswer = async ({data, from}) => {
         const pairName = buildConnectionsName(from, true)
-        await peerConnections[pairName].setRemoteDescription(data)
+        await peerConnections[pairName].setRemoteDescription(data.answer)
     }
 
     const updatePeerIceCandidate = async ({data}) => {
