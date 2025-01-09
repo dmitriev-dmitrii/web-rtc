@@ -17,7 +17,7 @@ export const useWebRtcConnections = () => {
 
     function onIceCandidate(event) {
 
-        if (!event.candidate) {
+        if (!event.candidate?.candidate) {
             return
         }
 
@@ -49,7 +49,7 @@ export const useWebRtcConnections = () => {
         const pairName = buildConnectionsName(from, true)
 
         if (peerConnections[pairName] || peerConnections[buildConnectionsName(from)]) {
-            console.error('this pairName already eat :', pairName)
+            console.warn('aborted createPeerOffer, pairName already eat :', pairName)
             return
         }
 
@@ -109,8 +109,12 @@ export const useWebRtcConnections = () => {
     }
 
     const updatePeerIceCandidate = async ({data}) => {
-
-        await peerConnections[data.pairName].addIceCandidate(new RTCIceCandidate(data.candidate));
+        try {
+        const {pairName, candidate} = data
+            await peerConnections[pairName].addIceCandidate(new RTCIceCandidate(candidate));
+        } catch (e) {
+            console.error('updatePeerIceCandidate', e)
+        }
 
     }
 
