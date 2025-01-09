@@ -1,4 +1,4 @@
-import {sendWsMessage} from "../ws.js";
+import {sendWebSocketMessage} from "../ws.js";
 
 import {peerConnections, buildConnectionsName} from "./useWebRtcStore.js";
 import {useWebRtcDataChannels} from "./useWebRtcDataChannels.js";
@@ -10,14 +10,13 @@ const configuration = {
     // ]
 };
 
-
 export const useWebRtcConnections = () => {
 
     const {setupDataChanelEvents} = useWebRtcDataChannels()
 
     function onIceCandidate(event) {
 
-        if (!event.candidate?.candidate) {
+        if (!event.candidate) {
             return
         }
 
@@ -30,7 +29,7 @@ export const useWebRtcConnections = () => {
             }
         }
 
-        sendWsMessage(payload)
+        sendWebSocketMessage(payload)
     }
 
 
@@ -40,7 +39,7 @@ export const useWebRtcConnections = () => {
             data: {}
         }
 
-        sendWsMessage(payload)
+        sendWebSocketMessage(payload)
     }
 
 
@@ -71,7 +70,7 @@ export const useWebRtcConnections = () => {
             data: {offer}
         }
 
-        sendWsMessage(payload)
+        sendWebSocketMessage(payload)
     }
 
     const confirmPeerOffer = async ({from, data}) => {
@@ -100,7 +99,7 @@ export const useWebRtcConnections = () => {
             data: {answer}
         }
 
-        sendWsMessage(payload)
+        sendWebSocketMessage(payload)
     }
 
     const setupPeerAnswer = async ({data, from}) => {
@@ -110,8 +109,13 @@ export const useWebRtcConnections = () => {
 
     const updatePeerIceCandidate = async ({data}) => {
         try {
-        const {pairName, candidate} = data
-            await peerConnections[pairName].addIceCandidate(new RTCIceCandidate(candidate));
+        const { pairName, candidate} = data
+
+        if (!candidate?.candidate) {
+            console.warn('updatePeerIceCandidate , candidate is empty', pairName )
+            return
+        }
+         await peerConnections[pairName].addIceCandidate(new RTCIceCandidate(candidate));
         } catch (e) {
             console.error('updatePeerIceCandidate', e)
         }

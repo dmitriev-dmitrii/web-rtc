@@ -1,6 +1,5 @@
 import {userId} from "./web-rtc/useWebRtcStore.js";
 
-
 window.socket = new WebSocket(`ws://${window.location.host}?userId=${userId}&roomId=123`);
 
 const onMessageHandlers = new Map()
@@ -26,10 +25,9 @@ socket.onmessage = async (event) => {
 
 }
 
-export const sendWsMessage = (payload) => {
+export const sendWebSocketMessage = (payload) => {
     socket.send(JSON.stringify(payload))
 }
-
 export const setupOnWsMessageHandlers = (payload = {}) => {
 
     Object.entries(payload).forEach(([key, ...value]) => {
