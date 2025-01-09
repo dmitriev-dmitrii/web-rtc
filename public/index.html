@@ -2,136 +2,133 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title> Web-RTC  </title>
+    <title> Web-RTC </title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/webrtc-adapter/8.2.0/adapter.js"></script>
     <link rel="stylesheet" href="index.css">
 </head>
 <body>
 
-    <h1 style="text-align: center">Web-RTC</h1>
+<h1 style="text-align: center">Web-RTC</h1>
 
-    <h2>wsOnlineClients : <span id="wsOnlineClientsDom"></span></h2>
+<h2>wsOnlineClients : <span id="wsOnlineClientsDom"></span></h2>
 
-    <button id="connectButton"> connectButton </button>
+<button id="connectButton"> connectButton</button>
 
-    <fieldset id="webRtcChat">
+<fieldset id="webRtcChat">
 
-        <legend>Web-RTC chat</legend>
+    <legend>Web-RTC chat</legend>
 
-        <li id="webRtcChatMessages"></li>
+    <li id="webRtcChatMessages"></li>
 
-        <form id="webRtcChatForm">
-            <input type="text" id="webRtcChatInput" placeholder="Введите сообщение" required />
-            <button type="submit">Отправить</button>
-        </form>
+    <form id="webRtcChatForm">
+        <input type="text" id="webRtcChatInput" placeholder="Введите сообщение" required/>
+        <button type="submit">Отправить</button>
+    </form>
 
-    </fieldset>
+</fieldset>
 
 </body>
 
 
-    
-    <script type="module" defer>
+<script type="module" defer>
 
-        import {
-            WEB_SOCKET_EVENTS,
-            DATA_CHANNELS_EVENTS ,
-            DATA_CHANNELS_MESSAGE_TYPE
-        } from "./constants.js";
+    import {
+        WEB_SOCKET_EVENTS,
+        DATA_CHANNELS_EVENTS,
+        DATA_CHANNELS_MESSAGE_TYPE
+    } from "./constants.js";
 
-        import {setupOnWsMessageHandlers} from "./ws.js";
-        import { useWebRtcConnections } from "./web-rtc/useWebRtcConnections.js";
-        import { useWebRtcDataChannels } from "./web-rtc/useWebRtcDataChannels.js";
+    import {setupOnWsMessageHandlers} from "./ws.js";
+    import {useWebRtcConnections} from "./web-rtc/useWebRtcConnections.js";
+    import {useWebRtcDataChannels} from "./web-rtc/useWebRtcDataChannels.js";
 
 
-        const wsOnlineClientsDom = document.getElementById('wsOnlineClientsDom');
-        const connectButton = document.getElementById('connectButton');
-        const webRtcChatForm = document.getElementById('webRtcChatForm');
-        const webRtcChatInput = document.getElementById('webRtcChatInput');
-        const webRtcChatMessages = document.getElementById('webRtcChatMessages');
+    const wsOnlineClientsDom = document.getElementById('wsOnlineClientsDom');
+    const connectButton = document.getElementById('connectButton');
+    const webRtcChatForm = document.getElementById('webRtcChatForm');
+    const webRtcChatInput = document.getElementById('webRtcChatInput');
+    const webRtcChatMessages = document.getElementById('webRtcChatMessages');
 
-        const {
-            sendMeOffer,
-            createPeerOffer ,
-            confirmPeerOffer ,
-            setupPeerAnswer  ,
-            updatePeerIceCandidate,
-        } = useWebRtcConnections()
+    const {
+        sendMeOffer,
+        createPeerOffer,
+        confirmPeerOffer,
+        setupPeerAnswer,
+        updatePeerIceCandidate,
+    } = useWebRtcConnections()
 
-        const { sendDataChanelMessage , setupCallbacks }  =   useWebRtcDataChannels()
+    const {sendDataChanelMessage, setupCallbacks} = useWebRtcDataChannels()
 
-        const printChatMessage = ( message )=> {
-            const listItem = document.createElement('li')
-            listItem.innerText = message
-            webRtcChatMessages.append(listItem)
+    const printChatMessage = (message) => {
+        const listItem = document.createElement('li')
+        listItem.innerText = message
+        webRtcChatMessages.append(listItem)
+    }
+
+    const onDataChanelMessage = ({data, type, from}) => {
+
+        if (type === DATA_CHANNELS_MESSAGE_TYPE.DATA_CHANEL_TEXT_MESSAGE) {
+            const message = `[${from}] : ${data.text}`
+            printChatMessage(message)
         }
 
-        const  onDataChanelMessage = ( { data , type , from } )=> {
+    }
+    const onDataChanelOpen = (e) => {
 
-            if (type === DATA_CHANNELS_MESSAGE_TYPE.DATA_CHANEL_TEXT_MESSAGE) {
-                const message = `[${from}] : ${data.text}`
-                printChatMessage(message)
+        printChatMessage(e.label + ' channel is open')
+    }
+
+    const onDataChanelClose = (e) => {
+
+        printChatMessage(e.label + ' channel is closed')
+    }
+
+    const updateWsOnlineClients = ({data}) => {
+        wsOnlineClientsDom.innerText = JSON.stringify(data.wsClientsOnline ?? [])
+    }
+
+    setupOnWsMessageHandlers({
+        [WEB_SOCKET_EVENTS.RTC_SEND_ME_OFFER]: [createPeerOffer],
+        [WEB_SOCKET_EVENTS.RTC_OFFER]: confirmPeerOffer,
+        [WEB_SOCKET_EVENTS.RTC_ANSWER]: setupPeerAnswer,
+        [WEB_SOCKET_EVENTS.RTC_ICE_CANDIDATE]: updatePeerIceCandidate,
+
+        [WEB_SOCKET_EVENTS.WS_CONNECTION]: updateWsOnlineClients,
+        [WEB_SOCKET_EVENTS.WS_CLOSE]: updateWsOnlineClients,
+    })
+
+    setupCallbacks({
+        [DATA_CHANNELS_EVENTS.DATA_CHANEL_ON_OPEN]: onDataChanelOpen,
+        [DATA_CHANNELS_EVENTS.DATA_CHANEL_ON_CLOSE]: onDataChanelClose,
+        [DATA_CHANNELS_EVENTS.DATA_CHANEL_ON_MESSAGE]: onDataChanelMessage,
+    })
+
+
+    connectButton.onclick = sendMeOffer
+
+    webRtcChatForm.addEventListener('submit', (event) => {
+
+        event.preventDefault();
+
+        if (!webRtcChatInput.value) {
+            return
+        }
+
+        const payload = {
+            type: DATA_CHANNELS_MESSAGE_TYPE.DATA_CHANEL_TEXT_MESSAGE,
+            data: {
+                text: webRtcChatInput.value,
             }
-
-        }
-        const onDataChanelOpen = (e)=>{
-            console.log(e)
-
-            printChatMessage( e.label + ' channel is open')
         }
 
-        const onDataChanelClose = (e)=>{
-            console.log(e)
-            printChatMessage(e.label + ' channel is closed')
-        }
+        sendDataChanelMessage(payload)
 
-        const updateWsOnlineClients = ({data})=> {
-            wsOnlineClientsDom.innerText = JSON.stringify(data.wsClientsOnline ?? [])
-        }
+        printChatMessage(`[me] : ${webRtcChatInput.value}`)
 
-        setupOnWsMessageHandlers({
-            [WEB_SOCKET_EVENTS.RTC_SEND_ME_OFFER]: [createPeerOffer],
-            [WEB_SOCKET_EVENTS.RTC_OFFER]: confirmPeerOffer,
-            [WEB_SOCKET_EVENTS.RTC_ANSWER]: setupPeerAnswer,
-            [WEB_SOCKET_EVENTS.RTC_ICE_CANDIDATE]: updatePeerIceCandidate,
-
-            [WEB_SOCKET_EVENTS.WS_CONNECTION]: updateWsOnlineClients,
-            [WEB_SOCKET_EVENTS.WS_CLOSE]: updateWsOnlineClients,
-        })
-
-        setupCallbacks({
-            [DATA_CHANNELS_EVENTS.DATA_CHANEL_ON_OPEN]:onDataChanelOpen,
-            [DATA_CHANNELS_EVENTS.DATA_CHANEL_ON_CLOSE]:  onDataChanelClose,
-            [DATA_CHANNELS_EVENTS.DATA_CHANEL_ON_MESSAGE]: onDataChanelMessage,
-        })
+        webRtcChatInput.value = '';
+    });
 
 
-        connectButton.onclick = sendMeOffer
-
-        webRtcChatForm.addEventListener('submit', (event) => {
-
-            event.preventDefault();
-
-            if (!webRtcChatInput.value) {
-                return
-            }
-
-            const payload  = {
-                type : DATA_CHANNELS_MESSAGE_TYPE.DATA_CHANEL_TEXT_MESSAGE,
-                data :{
-                    text: webRtcChatInput.value,
-                }
-            }
-
-            sendDataChanelMessage(payload)
-
-            printChatMessage(`[me] : ${webRtcChatInput.value}`)
-
-            webRtcChatInput.value = '';
-        });
-
-
-
-    </script>
+</script>
 </body>
 </html>

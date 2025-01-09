@@ -1,4 +1,4 @@
-*{
+* {
     box-sizing: border-box;
     color-scheme: dark;
 }
@@ -49,7 +49,7 @@
     color: slategray;
 }
 
-#webRtcChatMessages:before{
+#webRtcChatMessages:before {
     content: 'chat messages';
 }
 
@@ -83,6 +83,7 @@ fieldset {
     border: 1px solid currentColor;
     border-radius: 5px;
 }
+
 legend {
     font-weight: bold;
     font-size: 1.5rem;
