@@ -8,17 +8,21 @@
 </head>
 <body>
 
-<h1 style="text-align: center">Web-RTC</h1>
+<h1 style="text-align: center">Web-RTC connection </h1>
 
 <h2>wsOnlineClients : <span id="wsOnlineClientsDom"></span></h2>
 
 <button id="connectButton"> connectButton</button>
 
-<fieldset id="webRtcChat">
+<fieldset id="webRtc">
 
-    <legend>Web-RTC chat</legend>
+    <legend>Web-RTC</legend>
 
-    <li id="webRtcChatMessages"></li>
+    <div style="display: flex">
+        <ul id="webRtcChatMessages"></ul>
+        <div id="webRtcMediaStreams"></div>
+    </div>
+
 
     <form id="webRtcChatForm">
         <input type="text" id="webRtcChatInput" placeholder="Введите сообщение" required/>
@@ -41,6 +45,7 @@
     import {setupOnWsMessageHandlers} from "./ws.js";
     import {useWebRtcConnections} from "./web-rtc/useWebRtcConnections.js";
     import {useWebRtcDataChannels} from "./web-rtc/useWebRtcDataChannels.js";
+    import {useWebRtcMediaStreams} from "./web-rtc/useWebRtcMediaStreams.js";
 
 
     const wsOnlineClientsDom = document.getElementById('wsOnlineClientsDom');
@@ -48,6 +53,7 @@
     const webRtcChatForm = document.getElementById('webRtcChatForm');
     const webRtcChatInput = document.getElementById('webRtcChatInput');
     const webRtcChatMessages = document.getElementById('webRtcChatMessages');
+    const webRtcMediaStreams = document.getElementById('webRtcMediaStreams');
 
     const {
         sendMeOffer,
@@ -57,7 +63,14 @@
         updatePeerIceCandidate,
     } = useWebRtcConnections()
 
-    const {sendDataChanelMessage, setupDataChannelCallbacks} = useWebRtcDataChannels()
+    const {
+        sendDataChanelMessage,
+        setupDataChannelCallbacks
+    } = useWebRtcDataChannels()
+
+
+    const { initLocalMediaStream , localStream } =  useWebRtcMediaStreams()
+    await initLocalMediaStream()
 
     const printChatMessage = (message) => {
         const listItem = document.createElement('li')
@@ -104,7 +117,9 @@
     })
 
 
-    connectButton.onclick = sendMeOffer
+    connectButton.onclick = async ()=> {
+        await sendMeOffer()
+    }
 
     webRtcChatForm.addEventListener('submit', (event) => {
 

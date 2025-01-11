@@ -3,13 +3,18 @@
     color-scheme: dark;
 }
 
-#webRtcChat {
+#webRtc {
     display: flex;
-    align-items: stretch;
-    height: 300px;
+    flex-direction: column;
+    justify-content: space-between;
+
+    min-height: 300px;
+    max-width: 600px;
+    margin: 1rem auto;
 }
 
 #webRtcChatForm {
+
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
@@ -17,10 +22,12 @@
 
     width: 100%;
     margin: 0;
+    margin-top: auto;
     padding: 0;
 }
 
 #webRtcChatMessages {
+    flex: 1;
     margin: 0;
     padding: 0;
     display: block;
@@ -29,39 +36,16 @@
 }
 
 
-#webRtcChatMessages:empty:before {
-    content: 'chat is empty';
-    width: 100%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: slategray;
+
+#webRtcMediaStreams {
+    flex: 1;
+    margin: 0;
+    padding: 0;
+
+    display: grid;
+    grid-template-columns: 1fr  1fr  1fr  ;
 }
 
-#webRtcChatMessages:empty:before {
-    content: 'chat is empty';
-    width: 100%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: slategray;
-}
-
-#webRtcChatMessages:before {
-    content: 'chat messages';
-}
-
-#webRtcChatMessages:empty:before {
-    content: 'chat is empty';
-    width: 100%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: slategray;
-}
 
 
 input[type="text"] {
@@ -85,6 +69,16 @@ fieldset {
 }
 
 legend {
+    text-align: center;
     font-weight: bold;
     font-size: 1.5rem;
+}
+
+
+video {
+    width: 100px;
+    height: 100px;
+    border-radius: 5px;
+    overflow: hidden;
+    border: 1px solid currentColor;
 }

@@ -1,8 +1,11 @@
 import {sendWebSocketMessage} from "../ws.js";
 
-import {peerConnections, buildConnectionsName} from "./useWebRtcStore.js";
+import {peerConnections, buildConnectionsName, mediaStreams} from "./useWebRtcStore.js";
 import {useWebRtcDataChannels} from "./useWebRtcDataChannels.js";
+import {useWebRtcMediaStreams} from "./useWebRtcMediaStreams.js";
+
 import {WEB_SOCKET_EVENTS} from "../constants.js";
+
 
 const configuration = {
     // iceServers: [
@@ -10,9 +13,34 @@ const configuration = {
     // ]
 };
 
+
+
 export const useWebRtcConnections = () => {
 
     const {setupDataChanelEvents} = useWebRtcDataChannels()
+    const {setupMediaStreamToPeer} = useWebRtcMediaStreams()
+
+    const createPeerConnection = async ({pairName, isHost}) => {
+
+        peerConnections[pairName] = new RTCPeerConnection(configuration);
+
+
+        setupMediaStreamToPeer({pairName})
+
+        if (isHost) {
+            const channel = await peerConnections[pairName].createDataChannel(pairName);
+
+            setupDataChanelEvents({pairName, channel})
+        } else {
+            peerConnections[pairName].ondatachannel = (event) => {
+            const {channel} = event
+
+            setupDataChanelEvents({pairName, channel})
+            }
+        }
+
+        return peerConnections[pairName]
+    }
 
     function onIceCandidate(event) {
 
@@ -33,7 +61,7 @@ export const useWebRtcConnections = () => {
     }
 
 
-    const sendMeOffer = () => {
+    const sendMeOffer = async () => {
         const payload = {
             type: WEB_SOCKET_EVENTS.RTC_SEND_ME_OFFER,
             data: {}
@@ -46,23 +74,19 @@ export const useWebRtcConnections = () => {
     const createPeerOffer = async ({from}) => {
 
         const pairName = buildConnectionsName(from, true)
+        const isHost = true
 
         if (peerConnections[pairName] || peerConnections[buildConnectionsName(from)]) {
             console.warn('aborted createPeerOffer, pairName already eat :', pairName)
             return
         }
 
-        peerConnections[pairName] = new RTCPeerConnection(configuration)
+        const hostPeerConnection = await createPeerConnection({pairName, isHost})
 
-        peerConnections[pairName].onicecandidate = onIceCandidate.bind({remoteUserId: from, pairName});
+        hostPeerConnection.onicecandidate = onIceCandidate.bind({remoteUserId: from, pairName});
 
-        const channel = await peerConnections[pairName].createDataChannel(pairName);
-
-        setupDataChanelEvents({pairName, channel})
-
-
-        const offer = await peerConnections[pairName].createOffer()
-        await peerConnections[pairName].setLocalDescription(offer)
+        const offer = await hostPeerConnection.createOffer()
+        await hostPeerConnection.setLocalDescription(offer)
 
         const payload = {
             type: WEB_SOCKET_EVENTS.RTC_OFFER,
@@ -74,24 +98,18 @@ export const useWebRtcConnections = () => {
     }
 
     const confirmPeerOffer = async ({from, data}) => {
-        const pairName = buildConnectionsName(from)
 
-        peerConnections[pairName] = new RTCPeerConnection(configuration)
+        const isHost = false
+        const pairName = buildConnectionsName(from, isHost)
 
-        peerConnections[pairName].onicecandidate = onIceCandidate.bind({remoteUserId: from, pairName});
+        const clientPeerConnection = await createPeerConnection({pairName, isHost})
 
-        peerConnections[pairName].ondatachannel = (event) => {
+        clientPeerConnection.onicecandidate = onIceCandidate.bind({remoteUserId: from, pairName});
 
-            const {channel} = event
+        await clientPeerConnection.setRemoteDescription(data.offer)
 
-            setupDataChanelEvents({channel, pairName})
-
-        }
-
-        await peerConnections[pairName].setRemoteDescription(data.offer)
-
-        const answer = await peerConnections[pairName].createAnswer()
-        await peerConnections[pairName].setLocalDescription(answer)
+        const answer = await clientPeerConnection.createAnswer()
+        await clientPeerConnection.setLocalDescription(answer)
 
         const payload = {
             to: from,
@@ -109,13 +127,19 @@ export const useWebRtcConnections = () => {
 
     const updatePeerIceCandidate = async ({data}) => {
         try {
-        const { pairName, candidate} = data
 
-        if (!candidate?.candidate) {
-            console.warn('updatePeerIceCandidate , candidate is empty', pairName )
-            return
-        }
-         await peerConnections[pairName].addIceCandidate(new RTCIceCandidate(candidate));
+            const {pairName, candidate} = data
+
+            if (!candidate?.candidate) {
+                console.warn('updatePeerIceCandidate , candidate is empty', pairName)
+                return
+            }
+
+            if (!peerConnections[pairName]) {
+                console.warn('updatePeerIceCandidate , pairName is empty', pairName)
+            }
+
+            await peerConnections[pairName].addIceCandidate(candidate);
         } catch (e) {
             console.error('updatePeerIceCandidate', e)
         }
