@@ -23,26 +23,38 @@ export const useWebRtcDataChannels = () => {
 
         channel.onmessage = async (e) => {
 
+
+            if (!dataChannelsCallbacksMap.has(DATA_CHANNELS_EVENTS.DATA_CHANEL_ON_MESSAGE)) {
+                return
+            }
+
             const data = JSON.parse(e.data)
 
             dataChannelsCallbacksMap.get(DATA_CHANNELS_EVENTS.DATA_CHANEL_ON_MESSAGE).forEach((cb) => {
-                cb(data)
+                cb(data, {pairName})
             })
 
         }
 
         channel.onopen = async (e) => {
 
+            if (!dataChannelsCallbacksMap.has(DATA_CHANNELS_EVENTS.DATA_CHANEL_ON_OPEN)) {
+                return
+            }
+
             dataChannelsCallbacksMap.get(DATA_CHANNELS_EVENTS.DATA_CHANEL_ON_OPEN).forEach((cb) => {
-                cb(e.target)
+                cb(e.target, {pairName})
             })
 
         }
 
         channel.onclose = async (e) => {
+            if (!dataChannelsCallbacksMap.has(DATA_CHANNELS_EVENTS.DATA_CHANEL_ON_CLOSE)) {
+                return
+            }
 
             dataChannelsCallbacksMap.get(DATA_CHANNELS_EVENTS.DATA_CHANEL_ON_CLOSE).forEach((cb) => {
-                cb(e.target)
+                cb(e.target, {pairName})
             })
 
         };

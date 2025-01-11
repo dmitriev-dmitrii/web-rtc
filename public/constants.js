@@ -17,3 +17,8 @@ export const DATA_CHANNELS_EVENTS = {
 export const DATA_CHANNELS_MESSAGE_TYPE = {
     'DATA_CHANEL_TEXT_MESSAGE': 'dc-text-message',
 }
+
+export const MEDIA_STREAMS_EVENTS = {
+    'MEDIA_STREAM_ON_TRACK': 'ontrack',
+
+}

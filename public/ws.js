@@ -28,7 +28,7 @@ socket.onmessage = async (event) => {
 export const sendWebSocketMessage = (payload) => {
     socket.send(JSON.stringify(payload))
 }
-export const setupOnWsMessageHandlers = (payload = {}) => {
+export const setupOnWsMessageCallbaks = (payload = {}) => {
 
     Object.entries(payload).forEach(([key, ...value]) => {
 

@@ -8,17 +8,21 @@
 </head>
 <body>
 
-<h1 style="text-align: center">Web-RTC</h1>
+<h1 style="text-align: center">Web-RTC connection </h1>
 
 <h2>wsOnlineClients : <span id="wsOnlineClientsDom"></span></h2>
 
 <button id="connectButton"> connectButton</button>
 
-<fieldset id="webRtcChat">
+<fieldset id="webRtc">
 
-    <legend>Web-RTC chat</legend>
+    <legend>Web-RTC</legend>
 
-    <li id="webRtcChatMessages"></li>
+    <div style="display: flex">
+        <ul id="webRtcChatMessages"></ul>
+        <div id="webRtcMediaStreams"></div>
+    </div>
+
 
     <form id="webRtcChatForm">
         <input type="text" id="webRtcChatInput" placeholder="Введите сообщение" required/>
@@ -35,12 +39,15 @@
     import {
         WEB_SOCKET_EVENTS,
         DATA_CHANNELS_EVENTS,
-        DATA_CHANNELS_MESSAGE_TYPE
+        DATA_CHANNELS_MESSAGE_TYPE,
+        MEDIA_STREAMS_EVENTS
     } from "./constants.js";
 
-    import {setupOnWsMessageHandlers} from "./ws.js";
+    import {setupOnWsMessageCallbaks} from "./ws.js";
     import {useWebRtcConnections} from "./web-rtc/useWebRtcConnections.js";
     import {useWebRtcDataChannels} from "./web-rtc/useWebRtcDataChannels.js";
+    import {useWebRtcMediaStreams} from "./web-rtc/useWebRtcMediaStreams.js";
+
 
 
     const wsOnlineClientsDom = document.getElementById('wsOnlineClientsDom');
@@ -48,6 +55,7 @@
     const webRtcChatForm = document.getElementById('webRtcChatForm');
     const webRtcChatInput = document.getElementById('webRtcChatInput');
     const webRtcChatMessages = document.getElementById('webRtcChatMessages');
+    const webRtcMediaStreams = document.getElementById('webRtcMediaStreams');
 
     const {
         sendMeOffer,
@@ -57,8 +65,14 @@
         updatePeerIceCandidate,
     } = useWebRtcConnections()
 
-    const {sendDataChanelMessage, setupDataChannelCallbacks} = useWebRtcDataChannels()
+    const {
+        sendDataChanelMessage,
+        setupDataChannelCallbacks
+    } = useWebRtcDataChannels()
 
+
+    const { initLocalMediaStream , localStream , setupMediaStreamsCallbacks } =  useWebRtcMediaStreams()
+    await  initLocalMediaStream()
     const printChatMessage = (message) => {
         const listItem = document.createElement('li')
         listItem.innerText = message
@@ -87,7 +101,37 @@
         wsOnlineClientsDom.innerText = JSON.stringify(data.wsClientsOnline ?? [])
     }
 
-    setupOnWsMessageHandlers({
+
+    const appendMediaStream = ({ srcObject , pairName })=> {
+
+        const mediaStreamWrapper = document.createElement('div')
+        mediaStreamWrapper.setAttribute('id', pairName)
+        const video = document.createElement('video')
+        video.srcObject = srcObject
+        video.autoplay = true
+        mediaStreamWrapper.append(video)
+        webRtcMediaStreams.append( mediaStreamWrapper )
+
+        return video
+    }
+  const onMediaStreamTrack  =  ( event , { pairName } ) => {
+
+      appendMediaStream({ srcObject:event.streams[0] , pairName })
+
+   }
+
+
+   const setupLocalStream = async ()=> {
+
+     const video =   appendMediaStream({ srcObject: localStream, pairName:'me' } )
+
+     video.muted = true
+     video.style.borderColor = 'dodgerblue'
+   }
+
+
+
+    setupOnWsMessageCallbaks({
         [WEB_SOCKET_EVENTS.RTC_SEND_ME_OFFER]: [createPeerOffer],
         [WEB_SOCKET_EVENTS.RTC_OFFER]: confirmPeerOffer,
         [WEB_SOCKET_EVENTS.RTC_ANSWER]: setupPeerAnswer,
@@ -103,8 +147,15 @@
         [DATA_CHANNELS_EVENTS.DATA_CHANEL_ON_MESSAGE]: onDataChanelMessage,
     })
 
+    setupMediaStreamsCallbacks({
+        [MEDIA_STREAMS_EVENTS.MEDIA_STREAM_ON_TRACK]: onMediaStreamTrack,
+    })
 
-    connectButton.onclick = sendMeOffer
+
+    connectButton.onclick = async ()=> {
+        await setupLocalStream()
+        await sendMeOffer()
+    }
 
     webRtcChatForm.addEventListener('submit', (event) => {
 
