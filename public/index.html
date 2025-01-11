@@ -57,7 +57,7 @@
         updatePeerIceCandidate,
     } = useWebRtcConnections()
 
-    const {sendDataChanelMessage, setupCallbacks} = useWebRtcDataChannels()
+    const {sendDataChanelMessage, setupDataChannelCallbacks} = useWebRtcDataChannels()
 
     const printChatMessage = (message) => {
         const listItem = document.createElement('li')
@@ -97,7 +97,7 @@
         [WEB_SOCKET_EVENTS.WS_CLOSE]: updateWsOnlineClients,
     })
 
-    setupCallbacks({
+    setupDataChannelCallbacks({
         [DATA_CHANNELS_EVENTS.DATA_CHANEL_ON_OPEN]: onDataChanelOpen,
         [DATA_CHANNELS_EVENTS.DATA_CHANEL_ON_CLOSE]: onDataChanelClose,
         [DATA_CHANNELS_EVENTS.DATA_CHANEL_ON_MESSAGE]: onDataChanelMessage,

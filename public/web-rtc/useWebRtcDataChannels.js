@@ -4,7 +4,7 @@ import {DATA_CHANNELS_EVENTS} from "../constants.js";
 const dataChannelsCallbacksMap = new Map();
 
 export const useWebRtcDataChannels = () => {
-    const setupCallbacks = (callbacksPayload = {}) => {
+    const setupDataChannelCallbacks = (callbacksPayload = {}) => {
 
         Object.entries(callbacksPayload).forEach(([key, ...value]) => {
 
@@ -64,6 +64,6 @@ export const useWebRtcDataChannels = () => {
     return {
         sendDataChanelMessage,
         setupDataChanelEvents,
-        setupCallbacks
+        setupDataChannelCallbacks
     }
 }
