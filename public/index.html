@@ -162,24 +162,21 @@
 
         printChatMessage(e.label + ' channel is closed')
     }
-
     const updateWsOnlineClients = ({data}) => {
         wsOnlineClientsDom.innerText = JSON.stringify(data.wsClientsOnline ?? [])
     }
 
+  const onMediaStreamTrack  =  ( event , { pairName, remoteUserId , remoteUserName } ) => {
 
-    const appendMediaStream = ({ srcObject , pairName , remoteUserId })=> {
-       const v = webRtcMediaStreamsMap.set('hui2', new RemoteMediaStream({ remoteUserName : pairName ,  remoteUserId , srcObject }) )
+    const { streams } = event
 
-        webRtcMediaStreams.append( v )
-
+    if (webRtcMediaStreamsMap.has(pairName) ) {
+            return
     }
-  const onMediaStreamTrack  =  ( event , { pairName } ) => {
 
-      appendMediaStream({ srcObject:event.streams[0] , pairName })
-
+      webRtcMediaStreamsMap.set( pairName , new RemoteMediaStream( { remoteUserName  ,  remoteUserId , streams } ))
+      webRtcMediaStreams.append( webRtcMediaStreamsMap.get( pairName ) )
    }
-
 
 
     setupOnWsMessageCallbaks({
