@@ -7,14 +7,14 @@ let localStream
 export const useWebRtcMediaStreams = () => {
     const initLocalMediaStream = async (config = {})=> {
 
-        const defaultConfig = {video : true , audio : true}
+        const defaultConfig = { video : true , audio : true }
 
         localStream = await navigator.mediaDevices.getUserMedia({...defaultConfig,...config });
 
         return localStream
     }
 
-    const setupMediaStreamToPeer = ({pairName})=> {
+    const setupMediaStreamToPeer = ({pairName, remoteUserId})=> {
         
         if (localStream) {
             localStream.getTracks().forEach(track => peerConnections[pairName].addTrack(track, localStream));
@@ -27,13 +27,12 @@ export const useWebRtcMediaStreams = () => {
             if (mediaStreamsCallbacksMap.has(MEDIA_STREAMS_EVENTS.MEDIA_STREAM_ON_TRACK)) {
 
                 mediaStreamsCallbacksMap.get(MEDIA_STREAMS_EVENTS.MEDIA_STREAM_ON_TRACK).forEach( function (cb)  {
-                    console.log(pairName)
-                    cb( e , { pairName } )
+                    cb( e , { pairName, remoteUserId } )
                 })
 
             }
 
-        }.bind({pairName})
+        }.bind({pairName , remoteUserId })
     }
 
     const setupMediaStreamsCallbacks = (callbacksPayload) => {

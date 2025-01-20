@@ -81,7 +81,7 @@ export const useWebRtcConnections = () => {
             return
         }
 
-        const hostPeerConnection = await createPeerConnection({pairName, isHost})
+        const hostPeerConnection = await createPeerConnection({ remoteUserId: from  ,pairName, isHost})
 
         hostPeerConnection.onicecandidate = onIceCandidate.bind({remoteUserId: from, pairName});
 
@@ -102,7 +102,7 @@ export const useWebRtcConnections = () => {
         const isHost = false
         const pairName = buildConnectionsName(from, isHost)
 
-        const clientPeerConnection = await createPeerConnection({pairName, isHost})
+        const clientPeerConnection = await createPeerConnection({ remoteUserId: from ,pairName, isHost})
 
         clientPeerConnection.onicecandidate = onIceCandidate.bind({remoteUserId: from, pairName});
 
