@@ -2,7 +2,7 @@ import {dataChannels, userId} from "./useWebRtcStore.js";
 import {DATA_CHANNELS_EVENTS} from "../constants.js";
 
 const dataChannelsCallbacksMap = new Map();
-
+// TODO придумать как не дублировать код с евентами
 export const useWebRtcDataChannels = () => {
     const setupDataChannelCallbacks = (callbacksPayload = {}) => {
 

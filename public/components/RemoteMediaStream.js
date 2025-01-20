@@ -29,7 +29,6 @@ export class RemoteMediaStream extends HTMLElement {
 
     connectedCallback() {
         this.videoTag.srcObject = this.streams[0]
-        console.log(this.streams)
     }
 
     disconnectedCallback() {

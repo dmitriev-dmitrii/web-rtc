@@ -1,42 +1,43 @@
 import {dataChannels, mediaStreams, peerConnections, userId} from "./useWebRtcStore.js";
-import { MEDIA_STREAMS_EVENTS} from "../constants.js";
+import {MEDIA_STREAMS_EVENTS} from "../constants.js";
 
 const mediaStreamsCallbacksMap = new Map()
+// TODO придумать как не дублировать код с евентами
 
-let localStream
 export const useWebRtcMediaStreams = () => {
-    const initLocalMediaStream = async (config = {})=> {
+    const initLocalMediaStream = async (config = {}) => {
 
-        const defaultConfig = { video : true , audio : true }
+        const defaultConfig = {video: true, audio: true}
 
-        localStream = await navigator.mediaDevices.getUserMedia({...defaultConfig,...config });
+        mediaStreams[userId] = await navigator.mediaDevices.getUserMedia({...defaultConfig, ...config});
+        //cb navigator.mediaDevices.ondevicechange
 
-        return localStream
+        return mediaStreams[userId]
     }
 
-    const setupMediaStreamToPeer = ({pairName, remoteUserId})=> {
-        
-        if (localStream) {
-            localStream.getTracks().forEach(track => peerConnections[pairName].addTrack(track, localStream));
+    const setupMediaStreamToPeer = ({pairName, remoteUserId}) => {
+
+        if (mediaStreams[userId]) {
+            mediaStreams[userId].getTracks().forEach(track => peerConnections[pairName].addTrack(track, mediaStreams[userId]));
         }
 
         peerConnections[pairName].ontrack = function (e) {
 
-            mediaStreams[this.pairName] = e.streams
+            mediaStreams[this.remoteUserId] = e.streams
 
             if (mediaStreamsCallbacksMap.has(MEDIA_STREAMS_EVENTS.MEDIA_STREAM_ON_TRACK)) {
 
-                mediaStreamsCallbacksMap.get(MEDIA_STREAMS_EVENTS.MEDIA_STREAM_ON_TRACK).forEach( function (cb)  {
-                    cb( e , { pairName, remoteUserId } )
+                mediaStreamsCallbacksMap.get(MEDIA_STREAMS_EVENTS.MEDIA_STREAM_ON_TRACK).forEach(function (cb) {
+                    cb(e, {pairName, remoteUserId})
                 })
 
             }
 
-        }.bind({pairName , remoteUserId })
+        }.bind({pairName, remoteUserId})
     }
 
     const setupMediaStreamsCallbacks = (callbacksPayload) => {
-        
+
         Object.entries(callbacksPayload).forEach(([key, ...value]) => {
 
             if (!mediaStreamsCallbacksMap.has(key)) {
@@ -45,11 +46,10 @@ export const useWebRtcMediaStreams = () => {
 
             mediaStreamsCallbacksMap.set(key, [...mediaStreamsCallbacksMap.get(key), ...value.flat()])
         })
-  
+
     }
 
     return {
-        localStream,
         initLocalMediaStream,
         setupMediaStreamToPeer,
         setupMediaStreamsCallbacks
