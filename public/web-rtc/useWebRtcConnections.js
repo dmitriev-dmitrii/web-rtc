@@ -20,12 +20,12 @@ export const useWebRtcConnections = () => {
     const {setupDataChanelEvents} = useWebRtcDataChannels()
     const {setupMediaStreamToPeer} = useWebRtcMediaStreams()
 
-    const createPeerConnection = async ({pairName, isHost}) => {
+    const createPeerConnection = async ({pairName, isHost , remoteUserId}) => {
 
         peerConnections[pairName] = new RTCPeerConnection(configuration);
 
 
-        setupMediaStreamToPeer({pairName})
+        setupMediaStreamToPeer({pairName , remoteUserId })
 
         if (isHost) {
             const channel = await peerConnections[pairName].createDataChannel(pairName);
