@@ -152,6 +152,14 @@
             printChatMessage(message)
         }
 
+        if (type === DATA_CHANNELS_MESSAGE_TYPE.DATA_CHANEL_CHANGE_VIDEO_TRACK_STATE) {
+            webRtcMediaStreamsMap.get(from).updateVideoStatus(data.enabled)
+        }
+
+        if (type === DATA_CHANNELS_MESSAGE_TYPE.DATA_CHANEL_CHANGE_AUDIO_TRACK_STATE) {
+            webRtcMediaStreamsMap.get(from).updateAudioStatus(data.enabled)
+        }
+
     }
     const onDataChanelOpen = (e) => {
 
@@ -170,12 +178,12 @@
 
     const { streams } = event
 
-    if (webRtcMediaStreamsMap.has(pairName) ) {
+    if (webRtcMediaStreamsMap.has(remoteUserId) ) {
             return
     }
 
-      webRtcMediaStreamsMap.set( pairName , new RemoteMediaStream( { remoteUserName  ,  remoteUserId , streams } ))
-      webRtcMediaStreams.append( webRtcMediaStreamsMap.get( pairName ) )
+      webRtcMediaStreamsMap.set( remoteUserId , new RemoteMediaStream( { remoteUserName  ,  remoteUserId , streams } ))
+      webRtcMediaStreams.append( webRtcMediaStreamsMap.get( remoteUserId ) )
    }
 
 

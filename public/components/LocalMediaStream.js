@@ -1,5 +1,7 @@
 import {useWebRtcMediaStreams} from "../web-rtc/useWebRtcMediaStreams.js";
 import {mediaStreams, userId} from "../web-rtc/useWebRtcStore.js";
+import {useWebRtcDataChannels} from "../web-rtc/useWebRtcDataChannels.js";
+import {DATA_CHANNELS_MESSAGE_TYPE} from "../constants.js";
 
 
 const localMediaStreamTemplate = document.getElementById('local-media-stream-template');
@@ -12,7 +14,8 @@ const LOCAL_STREAM_ACTION_BAR_MAP = {
 }
 
 
-const {initLocalMediaStream, localStream} = useWebRtcMediaStreams()
+const { initLocalMediaStream } = useWebRtcMediaStreams()
+const { sendDataChanelMessage } = useWebRtcDataChannels()
 
 export class LocalMediaStream extends HTMLElement {
 
@@ -50,19 +53,43 @@ export class LocalMediaStream extends HTMLElement {
             return;
         }
 
+
         if (actionType === LOCAL_STREAM_ACTION_BAR_MAP.AUDIO) {
-            mediaStreams[userId].getAudioTracks().forEach((item)=> {
-                item.enabled = !item.enabled
-            })
+          const [track] =   mediaStreams[userId].getAudioTracks()
+
+          track.enabled = !track.enabled
+
+          const payload = {
+                type: DATA_CHANNELS_MESSAGE_TYPE.DATA_CHANEL_CHANGE_AUDIO_TRACK_STATE,
+                data: {
+                    enabled: track.enabled,
+                }
+          }
+
+          sendDataChanelMessage(payload)
+
+          track.enabled ?  eventTarget.classList.add('active') :  eventTarget.classList.remove('active')
+          return;
         }
 
         if (actionType === LOCAL_STREAM_ACTION_BAR_MAP.VIDEO) {
-            mediaStreams[userId].getVideoTracks().forEach((item)=> {
-                item.enabled = !item.enabled
-            })
+            const [track] = mediaStreams[userId].getVideoTracks()
+
+            track.enabled = !track.enabled
+
+            const payload = {
+                type: DATA_CHANNELS_MESSAGE_TYPE.DATA_CHANEL_CHANGE_VIDEO_TRACK_STATE,
+                data: {
+                    enabled: track.enabled,
+                }
+            }
+
+            sendDataChanelMessage(payload)
+
+            track.enabled ?  eventTarget.classList.add('active') :  eventTarget.classList.remove('active')
         }
 
-        eventTarget.classList.toggle('active')
+
     }
 
     async connectedCallback() {

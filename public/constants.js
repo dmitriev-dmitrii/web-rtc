@@ -16,6 +16,8 @@ export const DATA_CHANNELS_EVENTS = {
 
 export const DATA_CHANNELS_MESSAGE_TYPE = {
     'DATA_CHANEL_TEXT_MESSAGE': 'dc-text-message',
+    'DATA_CHANEL_CHANGE_VIDEO_TRACK_STATE': 'dc-change-video-track-state',
+    'DATA_CHANEL_CHANGE_AUDIO_TRACK_STATE': 'dc-change-audio-track-state',
 }
 
 export const MEDIA_STREAMS_EVENTS = {
