@@ -1,5 +1,5 @@
-import {dataChannels, userId} from "./useWebRtcStore.js";
-import {DATA_CHANNELS_EVENTS} from "../constants.js";
+import {dataChannels, userId , localUser } from "./useWebRtcStore.js";
+import {DATA_CHANNELS_EVENTS, DATA_CHANNELS_MESSAGE_TYPE} from "../constants.js";
 
 const dataChannelsCallbacksMap = new Map();
 // TODO придумать как не дублировать код с евентами
@@ -38,25 +38,29 @@ export const useWebRtcDataChannels = () => {
 
         channel.onopen = async (e) => {
 
-            if (!dataChannelsCallbacksMap.has(DATA_CHANNELS_EVENTS.DATA_CHANEL_ON_OPEN)) {
-                return
+            const payload = {
+                type: DATA_CHANNELS_MESSAGE_TYPE.DATA_CHANEL_OPEN,
+                data: {
+                    audio: localUser.audio,
+                    video: localUser.video
+                }
             }
 
-            dataChannelsCallbacksMap.get(DATA_CHANNELS_EVENTS.DATA_CHANEL_ON_OPEN).forEach((cb) => {
-                cb(e.target, {pairName})
-            })
+            sendDataChanelMessage(payload)
 
         }
 
         channel.onclose = async (e) => {
-            if (!dataChannelsCallbacksMap.has(DATA_CHANNELS_EVENTS.DATA_CHANEL_ON_CLOSE)) {
-                return
+
+
+            const payload = {
+                type: DATA_CHANNELS_MESSAGE_TYPE.DATA_CHANEL_CLOSED,
+                data: {
+                    e
+                }
             }
 
-            dataChannelsCallbacksMap.get(DATA_CHANNELS_EVENTS.DATA_CHANEL_ON_CLOSE).forEach((cb) => {
-                cb(e.target, {pairName})
-            })
-
+            sendDataChanelMessage(payload)
         };
 
     }

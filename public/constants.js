@@ -9,15 +9,14 @@ export const WEB_SOCKET_EVENTS = {
 }
 
 export const DATA_CHANNELS_EVENTS = {
-    'DATA_CHANEL_ON_OPEN': 'onopen',
-    'DATA_CHANEL_ON_CLOSE': 'onclose',
     'DATA_CHANEL_ON_MESSAGE': 'onmessage',
 }
 
 export const DATA_CHANNELS_MESSAGE_TYPE = {
-    'DATA_CHANEL_TEXT_MESSAGE': 'dc-text-message',
-    'DATA_CHANEL_CHANGE_VIDEO_TRACK_STATE': 'dc-change-video-track-state',
-    'DATA_CHANEL_CHANGE_AUDIO_TRACK_STATE': 'dc-change-audio-track-state',
+    'DATA_CHANEL_TEXT_MESSAGE': '1',
+    'DATA_CHANEL_UPDATE_MEDIA_TRACK_STATE': '2',
+    'DATA_CHANEL_OPEN': '4',
+    'DATA_CHANEL_CLOSED': '5',
 }
 
 export const MEDIA_STREAMS_EVENTS = {

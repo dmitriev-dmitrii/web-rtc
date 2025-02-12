@@ -5,11 +5,9 @@ const mediaStreamsCallbacksMap = new Map()
 // TODO придумать как не дублировать код с евентами
 
 export const useWebRtcMediaStreams = () => {
-    const initLocalMediaStream = async (config = {}) => {
+    const initLocalMediaStream = async () => {
 
-        const defaultConfig = {video: true, audio: true}
-
-        mediaStreams[userId] = await navigator.mediaDevices.getUserMedia({...defaultConfig, ...config});
+        mediaStreams[userId] = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         //cb navigator.mediaDevices.ondevicechange
 
         return mediaStreams[userId]

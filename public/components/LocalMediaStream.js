@@ -1,5 +1,5 @@
 import {useWebRtcMediaStreams} from "../web-rtc/useWebRtcMediaStreams.js";
-import {mediaStreams, userId} from "../web-rtc/useWebRtcStore.js";
+import {mediaStreams, userId , localUser} from "../web-rtc/useWebRtcStore.js";
 import {useWebRtcDataChannels} from "../web-rtc/useWebRtcDataChannels.js";
 import {DATA_CHANNELS_MESSAGE_TYPE} from "../constants.js";
 
@@ -14,10 +14,11 @@ const LOCAL_STREAM_ACTION_BAR_MAP = {
 }
 
 
-const { initLocalMediaStream } = useWebRtcMediaStreams()
-const { sendDataChanelMessage } = useWebRtcDataChannels()
+const {initLocalMediaStream} = useWebRtcMediaStreams()
+const {sendDataChanelMessage} = useWebRtcDataChannels()
 
 export class LocalMediaStream extends HTMLElement {
+
 
     constructor() {
         super();
@@ -29,7 +30,6 @@ export class LocalMediaStream extends HTMLElement {
 
         this.videoTag = this.shadowRoot.querySelector('video')
         this.videoTag.muted = true
-        this.videoTag.autoplay = true
 
         this.actionsBar = this.shadowRoot.querySelector('.actions-bar')
         this.audioToggleButton = this.actionsBar.querySelector('[data-action-type="audio"]')
@@ -55,40 +55,25 @@ export class LocalMediaStream extends HTMLElement {
 
 
         if (actionType === LOCAL_STREAM_ACTION_BAR_MAP.AUDIO) {
-          const [track] =   mediaStreams[userId].getAudioTracks()
-
-          track.enabled = !track.enabled
-
-          const payload = {
-                type: DATA_CHANNELS_MESSAGE_TYPE.DATA_CHANEL_CHANGE_AUDIO_TRACK_STATE,
-                data: {
-                    enabled: track.enabled,
-                }
-          }
-
-          sendDataChanelMessage(payload)
-
-          track.enabled ?  eventTarget.classList.add('active') :  eventTarget.classList.remove('active')
-          return;
+            localUser.audio = !localUser.audio
+            localUser.audio ? eventTarget.classList.add('active') : eventTarget.classList.remove('active')
         }
 
         if (actionType === LOCAL_STREAM_ACTION_BAR_MAP.VIDEO) {
-            const [track] = mediaStreams[userId].getVideoTracks()
-
-            track.enabled = !track.enabled
-
-            const payload = {
-                type: DATA_CHANNELS_MESSAGE_TYPE.DATA_CHANEL_CHANGE_VIDEO_TRACK_STATE,
-                data: {
-                    enabled: track.enabled,
-                }
-            }
-
-            sendDataChanelMessage(payload)
-
-            track.enabled ?  eventTarget.classList.add('active') :  eventTarget.classList.remove('active')
+            localUser.video = !localUser.video
+            localUser.video ? eventTarget.classList.add('active') : eventTarget.classList.remove('active')
         }
 
+
+        const payload = {
+            type: DATA_CHANNELS_MESSAGE_TYPE.DATA_CHANEL_UPDATE_MEDIA_TRACK_STATE,
+            data: {
+                video: localUser.video,
+                audio: localUser.audio
+            }
+        }
+
+        sendDataChanelMessage(payload)
 
     }
 
@@ -101,14 +86,11 @@ export class LocalMediaStream extends HTMLElement {
 
         this.videoTag.srcObject = mediaStreams[userId]
 
-        if (mediaStreams[userId].getVideoTracks().some((item)=> item.enabled)) {
-            this.videoToggleButton.classList.add('active')
-        }
+        localUser.video ? this.videoToggleButton.classList.add('active') : this.videoToggleButton.classList.remove('active')
 
-        if (mediaStreams[userId].getAudioTracks().some((item)=> item.enabled)) {
-            this.audioToggleButton.classList.add('active')
-        }
+        localUser.audio ? this.audioToggleButton.classList.add('active') : this.audioToggleButton.classList.remove('active')
 
+        await this.videoTag.play()
     }
 
     disconnectedCallback() {
