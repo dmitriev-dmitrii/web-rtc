@@ -1,7 +1,12 @@
 export const userId = adapter.browserDetails.browser
 export const peerConnections = {};
+window.peerConnections = peerConnections
 export const dataChannels = {};
+window.dataChannels = dataChannels
 export const mediaStreams = {};
+window.mediaStreams = mediaStreams
+
+export const remoteMediaStreamsDomMap = new Map()
 export const localUser = {
 
     userId : adapter.browserDetails.browser,

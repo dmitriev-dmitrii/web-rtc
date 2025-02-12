@@ -47,7 +47,23 @@ export const useWebRtcMediaStreams = () => {
 
     }
 
+    const deleteMediaStream  = (remoteUserId)=> {
+
+        if (mediaStreams[remoteUserId]) {
+            mediaStreams[remoteUserId].forEach((stream)=>{
+                stream.getTracks().forEach((track)=>{
+                    track.stop()
+                })
+            })
+        }
+
+
+        delete mediaStreams[remoteUserId]
+
+    }
+
     return {
+        deleteMediaStream,
         initLocalMediaStream,
         setupMediaStreamToPeer,
         setupMediaStreamsCallbacks

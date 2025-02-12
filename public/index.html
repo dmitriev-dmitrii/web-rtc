@@ -6,7 +6,7 @@
     <script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
     <link rel="stylesheet" href="index.css">
 </head>
-<body>
+<body style="display: flex; flex-direction: column;">
 
 <h1 style="text-align: center">Web-RTC connection </h1>
 
@@ -94,6 +94,12 @@
 
 <script type="module" defer>
 
+    import {LocalMediaStream} from "./components/LocalMediaStream.js";
+    import {RemoteMediaStream} from "./components/RemoteMediaStream.js";
+
+    customElements.define('remote-media-stream', RemoteMediaStream);
+    customElements.define('local-media-stream', LocalMediaStream);
+
     import {
         WEB_SOCKET_EVENTS,
         DATA_CHANNELS_EVENTS,
@@ -101,16 +107,11 @@
         MEDIA_STREAMS_EVENTS
     } from "./constants.js";
 
+    import {remoteMediaStreamsDomMap} from './web-rtc/useWebRtcStore.js'
     import {setupOnWsMessageCallbaks} from "./ws.js";
     import {useWebRtcConnections} from "./web-rtc/useWebRtcConnections.js";
     import {useWebRtcDataChannels} from "./web-rtc/useWebRtcDataChannels.js";
     import {useWebRtcMediaStreams} from "./web-rtc/useWebRtcMediaStreams.js";
-    import {LocalMediaStream} from "./components/LocalMediaStream.js";
-    import {RemoteMediaStream} from "./components/RemoteMediaStream.js";
-
-
-    customElements.define('remote-media-stream', RemoteMediaStream);
-    customElements.define('local-media-stream', LocalMediaStream);
 
     const wsOnlineClientsDom = document.getElementById('wsOnlineClientsDom');
     const connectButton = document.getElementById('connectButton');
@@ -119,7 +120,7 @@
     const webRtcChatMessages = document.getElementById('webRtcChatMessages');
     const webRtcMediaStreams = document.getElementById('webRtcMediaStreams');
 
-    const webRtcMediaStreamsMap = new Map()
+
 
     const {
         sendMeOffer,
@@ -127,63 +128,57 @@
         confirmPeerOffer,
         setupPeerAnswer,
         updatePeerIceCandidate,
+
     } = useWebRtcConnections()
 
     const {
         sendDataChanelMessage,
-        setupDataChannelCallbacks
+        setupDataChannelCallbacks,
+
     } = useWebRtcDataChannels()
 
-
-    const {setupMediaStreamsCallbacks} = useWebRtcMediaStreams()
+    const {
+        setupMediaStreamsCallbacks,
+    } = useWebRtcMediaStreams()
 
     const printChatMessage = (message) => {
         const listItem = document.createElement('li')
         listItem.innerText = message
         webRtcChatMessages.append(listItem)
     }
+    const onDataChanelMessage = ({ data, type, from, pairName }) => {
 
-    const onDataChanelMessage = ({data, type, from}) => {
-
-        if (type === DATA_CHANNELS_MESSAGE_TYPE.DATA_CHANEL_OPEN) {
-            const message = `[${from}] : DATA_CHANEL_JOINED_MEET`
-            const remoteStream =  webRtcMediaStreamsMap.get(from)
+        if (type === DATA_CHANNELS_MESSAGE_TYPE.DATA_CHANEL_OPEN && remoteMediaStreamsDomMap.has(from)) {
+            const message = `[${from}] : DATA_CHANEL_OPEN`
+            const remoteStream =  remoteMediaStreamsDomMap.get(from)
             remoteStream.updateAudioStatus(data.audio)
             remoteStream.updateVideoStatus(data.video)
             printChatMessage(message)
             return
         }
 
-        if (type === DATA_CHANNELS_MESSAGE_TYPE.DATA_CHANEL_CLOSED) {
-            const message = `[${from}] : DATA_CHANEL_LEAVED_MEET`
+        if (type === DATA_CHANNELS_MESSAGE_TYPE.DATA_CHANEL_CLOSE && remoteMediaStreamsDomMap.has(from)) {
+
+            const message = `[${from}] : DATA_CHANEL_CLOSE`
             printChatMessage(message)
+
+            remoteMediaStreamsDomMap.get(from).removeMediaStreamComponent()
+            remoteMediaStreamsDomMap.delete(from)
             return
         }
 
+        if (type === DATA_CHANNELS_MESSAGE_TYPE.DATA_CHANEL_UPDATE_MEDIA_TRACK_STATE && remoteMediaStreamsDomMap.has(from)) {
 
-        if (type === DATA_CHANNELS_MESSAGE_TYPE.DATA_CHANEL_UPDATE_MEDIA_TRACK_STATE && webRtcMediaStreamsMap.has(from)) {
-
-            webRtcMediaStreamsMap.get(from).updateVideoStatus(data.video)
-            webRtcMediaStreamsMap.get(from).updateAudioStatus(data.audio)
+            remoteMediaStreamsDomMap.get(from).updateVideoStatus(data.video)
+            remoteMediaStreamsDomMap.get(from).updateAudioStatus(data.audio)
             return;
         }
-
 
         if (type === DATA_CHANNELS_MESSAGE_TYPE.DATA_CHANEL_TEXT_MESSAGE) {
             const message = `[${from}] : ${data.text}`
             printChatMessage(message)
-
         }
 
-    }
-    const onDataChanelOpen = (e) => {
-
-        printChatMessage(e.label + ' channel is open')
-    }
-
-    const onDataChanelClose = (e) => {
-
-        printChatMessage(e.label + ' channel is closed')
     }
     const updateWsOnlineClients = ({data}) => {
         wsOnlineClientsDom.innerText = JSON.stringify(data.wsClientsOnline ?? [])
@@ -193,14 +188,13 @@
 
         const {streams} = event
 
-        if (webRtcMediaStreamsMap.has(remoteUserId)) {
+        if (remoteMediaStreamsDomMap.has(remoteUserId)) {
             return
         }
 
-        webRtcMediaStreamsMap.set(remoteUserId, new RemoteMediaStream({remoteUserName, remoteUserId, streams}))
-        webRtcMediaStreams.append(webRtcMediaStreamsMap.get(remoteUserId))
+        remoteMediaStreamsDomMap.set(remoteUserId, new RemoteMediaStream({ remoteUserName, remoteUserId, streams , pairName }))
+        webRtcMediaStreams.append(remoteMediaStreamsDomMap.get(remoteUserId))
     }
-
 
     setupOnWsMessageCallbaks({
         [WEB_SOCKET_EVENTS.RTC_SEND_ME_OFFER]: [createPeerOffer],
@@ -220,14 +214,12 @@
         [MEDIA_STREAMS_EVENTS.MEDIA_STREAM_ON_TRACK]: onMediaStreamTrack,
     })
 
-
     connectButton.onclick = async () => {
         await sendMeOffer()
     }
 
     webRtcChatForm.addEventListener('submit', (event) => {
         try {
-
 
             event.preventDefault();
 
@@ -251,7 +243,6 @@
 
         }
     });
-
 
 </script>
 </body>

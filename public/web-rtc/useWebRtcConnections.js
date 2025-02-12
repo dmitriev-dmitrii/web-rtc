@@ -1,6 +1,6 @@
 import {sendWebSocketMessage} from "../ws.js";
 
-import {peerConnections, buildConnectionsName, mediaStreams} from "./useWebRtcStore.js";
+import {peerConnections, buildConnectionsName, mediaStreams, dataChannels} from "./useWebRtcStore.js";
 import {useWebRtcDataChannels} from "./useWebRtcDataChannels.js";
 import {useWebRtcMediaStreams} from "./useWebRtcMediaStreams.js";
 
@@ -14,18 +14,17 @@ const configuration = {
 };
 
 
-
 export const useWebRtcConnections = () => {
 
     const {setupDataChanelEvents} = useWebRtcDataChannels()
     const {setupMediaStreamToPeer} = useWebRtcMediaStreams()
 
-    const createPeerConnection = async ({pairName, isHost , remoteUserId}) => {
+    const createPeerConnection = async ({pairName, isHost, remoteUserId}) => {
 
         peerConnections[pairName] = new RTCPeerConnection(configuration);
 
 
-        setupMediaStreamToPeer({pairName , remoteUserId })
+        setupMediaStreamToPeer({pairName, remoteUserId})
 
         if (isHost) {
             const channel = await peerConnections[pairName].createDataChannel(pairName);
@@ -33,9 +32,9 @@ export const useWebRtcConnections = () => {
             setupDataChanelEvents({pairName, channel})
         } else {
             peerConnections[pairName].ondatachannel = (event) => {
-            const {channel} = event
+                const {channel} = event
 
-            setupDataChanelEvents({pairName, channel})
+                setupDataChanelEvents({pairName, channel})
             }
         }
 
@@ -81,7 +80,7 @@ export const useWebRtcConnections = () => {
             return
         }
 
-        const hostPeerConnection = await createPeerConnection({ remoteUserId: from  ,pairName, isHost})
+        const hostPeerConnection = await createPeerConnection({remoteUserId: from, pairName, isHost})
 
         hostPeerConnection.onicecandidate = onIceCandidate.bind({remoteUserId: from, pairName});
 
@@ -102,7 +101,7 @@ export const useWebRtcConnections = () => {
         const isHost = false
         const pairName = buildConnectionsName(from, isHost)
 
-        const clientPeerConnection = await createPeerConnection({ remoteUserId: from ,pairName, isHost})
+        const clientPeerConnection = await createPeerConnection({remoteUserId: from, pairName, isHost})
 
         clientPeerConnection.onicecandidate = onIceCandidate.bind({remoteUserId: from, pairName});
 
@@ -147,12 +146,23 @@ export const useWebRtcConnections = () => {
     }
 
 
+    const deletePeerConnection = (pairName) => {
+
+        if (peerConnections[pairName]) {
+            peerConnections[pairName].close()
+        }
+
+        delete     peerConnections[pairName]
+
+    }
+
     return {
         sendMeOffer,
         updatePeerIceCandidate,
         createPeerOffer,
         confirmPeerOffer,
-        setupPeerAnswer
+        setupPeerAnswer,
+        deletePeerConnection,
     }
 }
 

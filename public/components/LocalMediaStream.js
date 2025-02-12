@@ -1,8 +1,7 @@
 import {useWebRtcMediaStreams} from "../web-rtc/useWebRtcMediaStreams.js";
-import {mediaStreams, userId , localUser} from "../web-rtc/useWebRtcStore.js";
+import {mediaStreams, userId, localUser, peerConnections ,  remoteMediaStreamsDomMap} from "../web-rtc/useWebRtcStore.js";
 import {useWebRtcDataChannels} from "../web-rtc/useWebRtcDataChannels.js";
 import {DATA_CHANNELS_MESSAGE_TYPE} from "../constants.js";
-
 
 const localMediaStreamTemplate = document.getElementById('local-media-stream-template');
 
@@ -15,7 +14,7 @@ const LOCAL_STREAM_ACTION_BAR_MAP = {
 
 
 const {initLocalMediaStream} = useWebRtcMediaStreams()
-const {sendDataChanelMessage} = useWebRtcDataChannels()
+const {sendDataChanelMessage , deleteDataChanel } = useWebRtcDataChannels()
 
 export class LocalMediaStream extends HTMLElement {
 
@@ -50,9 +49,21 @@ export class LocalMediaStream extends HTMLElement {
 
         if (actionType === LOCAL_STREAM_ACTION_BAR_MAP.LEAVE_MEET) {
 
+            const payload = {
+                type: DATA_CHANNELS_MESSAGE_TYPE.DATA_CHANEL_CLOSE,
+                data: {
+
+                }
+            }
+
+            sendDataChanelMessage(payload)
+            remoteMediaStreamsDomMap.forEach((item)=>{
+                item.removeMediaStreamComponent()
+            })
+            remoteMediaStreamsDomMap.clear()
+
             return;
         }
-
 
         if (actionType === LOCAL_STREAM_ACTION_BAR_MAP.AUDIO) {
             localUser.audio = !localUser.audio

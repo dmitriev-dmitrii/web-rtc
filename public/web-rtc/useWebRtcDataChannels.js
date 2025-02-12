@@ -1,4 +1,4 @@
-import {dataChannels, userId , localUser } from "./useWebRtcStore.js";
+import {dataChannels, userId, localUser, mediaStreams} from "./useWebRtcStore.js";
 import {DATA_CHANNELS_EVENTS, DATA_CHANNELS_MESSAGE_TYPE} from "../constants.js";
 
 const dataChannelsCallbacksMap = new Map();
@@ -54,7 +54,7 @@ export const useWebRtcDataChannels = () => {
 
 
             const payload = {
-                type: DATA_CHANNELS_MESSAGE_TYPE.DATA_CHANEL_CLOSED,
+                type: DATA_CHANNELS_MESSAGE_TYPE.DATA_CHANEL_CLOSE,
                 data: {
                     e
                 }
@@ -67,17 +67,30 @@ export const useWebRtcDataChannels = () => {
 
     const sendDataChanelMessage = (payload) => {
 
-        const data = JSON.stringify({...payload, from: userId})
-
         Object.values(dataChannels).forEach((item) => {
+
+            const data = JSON.stringify({...payload, from: userId , pairName:item.label })
+
             if (item.readyState === 'open') {
                 item.send(data)
             }
+
         })
 
     }
 
+   const  deleteDataChanel = (pairName)=> {
+
+        if (dataChannels[pairName]) {
+            dataChannels[pairName].close()
+        }
+
+       delete dataChannels[pairName]
+
+    }
+
     return {
+        deleteDataChanel,
         sendDataChanelMessage,
         setupDataChanelEvents,
         setupDataChannelCallbacks

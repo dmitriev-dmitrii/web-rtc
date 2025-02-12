@@ -1,4 +1,21 @@
+import {useWebRtcMediaStreams} from "../web-rtc/useWebRtcMediaStreams.js";
+import {useWebRtcDataChannels} from "../web-rtc/useWebRtcDataChannels.js";
+import {useWebRtcConnections} from "../web-rtc/useWebRtcConnections.js";
+
 const remoteMediaStreamTemplate = document.getElementById('remote-media-stream-template');
+
+const {
+    deleteMediaStream,
+} = useWebRtcMediaStreams()
+
+const {
+    deleteDataChanel
+} = useWebRtcDataChannels()
+
+const {
+    deletePeerConnection
+} = useWebRtcConnections()
+
 
 export class RemoteMediaStream extends HTMLElement {
 
@@ -7,10 +24,13 @@ export class RemoteMediaStream extends HTMLElement {
 
     streams = []
 
-    constructor({remoteUserName = '', remoteUserId = '', streams = []} = {}) {
+    constructor({remoteUserName = '', remoteUserId = '', streams = [], pairName} = {}) {
         super();
+
         this.remoteUserId = remoteUserId
         this.remoteUserName = remoteUserName || remoteUserId
+        this.pairName = pairName
+
         this.streams = streams
 
         this.attachShadow({mode: 'open'}).appendChild(
@@ -37,7 +57,7 @@ export class RemoteMediaStream extends HTMLElement {
     }
 
     adoptedCallback() {
-        console.log("Custom element moved to new page.");
+
     }
 
     attributeChangedCallback(name, oldValue, newValue) {
@@ -53,8 +73,14 @@ export class RemoteMediaStream extends HTMLElement {
         val ? this.videoStatus.classList.add('active') : this.videoStatus.classList.remove('active')
     }
 
-    onLeaveMeet() {
+    removeMediaStreamComponent() {
         this.classList.add('remove');
+        this.videoTag.muted = true
+        this.videoTag.pause()
+
+        deleteMediaStream(this.remoteUserId)
+        deleteDataChanel(this.pairName)
+        deletePeerConnection(this.pairName)
 
         setTimeout(() => {
             this.remove();
